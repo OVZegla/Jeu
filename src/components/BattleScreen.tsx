@@ -1,6 +1,7 @@
 import type { Ability, Character, GameState } from '../game/types';
 import { CharacterCard } from './CharacterCard';
-import { BossCard } from './BossCard';
+import { BossStatusBar } from './BossStatusBar';
+import { BattleArena } from './BattleArena';
 import { AbilityPanel } from './AbilityPanel';
 import { CombatLog } from './CombatLog';
 import './BattleScreen.css';
@@ -25,7 +26,6 @@ export function BattleScreen({
   const isPickingTarget = state.pendingTarget !== null;
   const targetingAbility = state.pendingTarget?.ability;
 
-  // Selon l'ability, quelles entités sont sélectionnables ?
   const charTargetable = (c: Character) => {
     if (!isPickingTarget || !c.alive) return false;
     return targetingAbility!.target === 'ally';
@@ -41,7 +41,7 @@ export function BattleScreen({
           <div className="battle-phase">
             {state.phase === 'playerTurn'
               ? `Action : ${activeCharacter ? activeCharacter.name : '...'}`
-              : 'Tour du Champion'}
+              : '⌛ Tour du Champion'}
           </div>
         </div>
         <div className="battle-header-title">Le Bureau des Archives Infinies</div>
@@ -51,23 +51,22 @@ export function BattleScreen({
       </header>
 
       <div className="battle-main">
-        <div className="battle-center">
-          <BossCard
+        <div className="battle-left">
+          <BossStatusBar
             boss={state.boss}
-            damageTick={state.damageTicks[state.boss.id] || 0}
-            attackTick={state.attackTicks[state.boss.id] || 0}
-            lastDamage={state.lastDamage[state.boss.id] || 0}
             isTargetable={bossTargetable}
             onSelect={() => onTargetSelect(state.boss.id)}
           />
+
+          <BattleArena state={state} />
 
           {isPickingTarget && (
             <div className="targeting-banner">
               <span>
                 🎯 Cible pour <strong>{targetingAbility!.name}</strong>&nbsp;:{' '}
                 {targetingAbility!.target === 'enemy'
-                  ? 'choisis le boss'
-                  : 'choisis un allié'}
+                  ? 'clique sur le boss en haut'
+                  : 'clique sur un allié ci-dessous'}
               </span>
               <button className="targeting-cancel" onClick={onCancelTarget}>
                 Annuler
@@ -86,11 +85,6 @@ export function BattleScreen({
                   !isPickingTarget
                 }
                 isTargetable={charTargetable(c)}
-                damageTick={state.damageTicks[c.id] || 0}
-                healTick={state.healTicks[c.id] || 0}
-                attackTick={state.attackTicks[c.id] || 0}
-                lastDamage={state.lastDamage[c.id] || 0}
-                lastHeal={state.lastHeal[c.id] || 0}
                 onSelect={() => onTargetSelect(c.id)}
               />
             ))}

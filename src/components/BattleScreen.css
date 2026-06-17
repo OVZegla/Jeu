@@ -66,23 +66,29 @@
 .battle-main {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 16px;
-  padding: 16px 20px 20px;
+  grid-template-columns: 1fr 340px;
+  gap: 14px;
+  padding: 14px 20px 20px;
   min-height: 0;
 }
 
-.battle-center {
+.battle-left {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
+}
+
+/* L'arène doit prendre de la place */
+.battle-left > .battle-arena {
+  flex: 1 1 460px;
+  min-height: 460px;
 }
 
 .battle-team {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .battle-side {
@@ -96,11 +102,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   background: linear-gradient(180deg, rgba(40, 60, 50, 0.85), rgba(20, 30, 25, 0.85));
   border: 1px solid #79e09a;
   border-radius: 6px;
   color: #c5e8d0;
+  font-size: 13px;
   animation: targetingPulse 1.4s ease-in-out infinite;
 }
 
@@ -128,7 +135,7 @@
     grid-template-columns: 1fr;
   }
   .battle-side {
-    height: 280px;
+    height: 240px;
   }
 }
 
