@@ -1,0 +1,91 @@
+.end-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: linear-gradient(180deg, #0a0a0c 0%, #060607 100%);
+}
+
+.end-victory .end-card {
+  border-color: rgba(216, 201, 138, 0.5);
+  box-shadow: 0 0 80px rgba(216, 201, 138, 0.25);
+}
+
+.end-defeat .end-card {
+  border-color: rgba(180, 60, 60, 0.5);
+  box-shadow: 0 0 80px rgba(180, 60, 60, 0.25);
+}
+
+.end-card {
+  max-width: 620px;
+  padding: 36px 40px;
+  border: 1px solid rgba(216, 201, 138, 0.3);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(20, 20, 22, 0.96), rgba(10, 10, 12, 0.98));
+  text-align: center;
+}
+
+.end-sigil {
+  font-size: 64px;
+  margin-bottom: 8px;
+}
+
+.end-card h1 {
+  font-family: 'Georgia', serif;
+  font-size: 36px;
+  margin: 0 0 16px;
+  color: #f0e3a8;
+  letter-spacing: 0.06em;
+}
+
+.end-defeat .end-card h1 {
+  color: #e0a0a0;
+}
+
+.end-text {
+  color: #c0bfb8;
+  line-height: 1.6;
+  font-size: 15px;
+  margin: 0 0 24px;
+}
+
+.end-log {
+  text-align: left;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 24px;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 13px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.end-log-entry {
+  color: #b0b5ad;
+  padding: 2px 0;
+}
+
+.log-turn {
+  color: #6f7a6f;
+  margin-right: 6px;
+}
+
+.end-button {
+  font-family: 'Georgia', serif;
+  font-size: 16px;
+  padding: 12px 24px;
+  background: linear-gradient(180deg, #3a3a40, #1a1a1d);
+  color: #f0e3a8;
+  border: 1px solid rgba(216, 201, 138, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.18s;
+}
+
+.end-button:hover {
+  background: linear-gradient(180deg, #4a4a50, #25252a);
+  box-shadow: 0 0 24px rgba(216, 201, 138, 0.35);
+}

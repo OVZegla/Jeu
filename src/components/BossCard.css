@@ -1,0 +1,243 @@
+.boss-card {
+  position: relative;
+  border: 1px solid rgba(216, 201, 138, 0.25);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(20, 20, 30, 0.85), rgba(8, 8, 14, 0.95));
+  overflow: hidden;
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.boss-card.boss-targetable {
+  cursor: pointer;
+  border-color: #ff5577;
+  box-shadow: 0 0 26px rgba(255, 80, 110, 0.45);
+}
+
+.boss-card.boss-targetable:hover {
+  transform: translateY(-1px);
+}
+
+.boss-card.boss-enraged {
+  border-color: #79e09a;
+  box-shadow: 0 0 36px rgba(120, 220, 160, 0.4);
+}
+
+.boss-card.boss-flash {
+  animation: bossFlash 0.4s ease-out;
+}
+
+@keyframes bossFlash {
+  0% { background-color: rgba(220, 80, 80, 0.4); }
+  100% { background-color: transparent; }
+}
+
+/* === Scene background === */
+.boss-scene {
+  position: relative;
+  height: 260px;
+  background:
+    radial-gradient(ellipse at 50% 70%, rgba(80, 200, 130, 0.18), transparent 60%),
+    linear-gradient(180deg, #1a1d28 0%, #08070c 100%);
+  overflow: hidden;
+}
+
+.boss-bookshelf {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  background:
+    repeating-linear-gradient(0deg,
+      rgba(160, 120, 60, 0.4) 0px,
+      rgba(160, 120, 60, 0.4) 22px,
+      rgba(60, 40, 20, 0.6) 22px,
+      rgba(60, 40, 20, 0.6) 26px),
+    repeating-linear-gradient(90deg,
+      rgba(40, 24, 12, 0.7) 0px,
+      rgba(40, 24, 12, 0.7) 12px,
+      rgba(110, 70, 40, 0.6) 12px,
+      rgba(110, 70, 40, 0.6) 18px);
+  opacity: 0.4;
+}
+
+.bookshelf-left { left: 0; }
+.bookshelf-right { right: 0; }
+
+.boss-desk {
+  position: absolute;
+  bottom: 0;
+  left: 90px;
+  right: 90px;
+  height: 70px;
+  background:
+    linear-gradient(180deg, #5a3a1c 0%, #2a1a0c 100%);
+  border-top: 3px solid #7a4a2a;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.boss-desk::before {
+  content: '';
+  position: absolute;
+  top: -22px;
+  left: 12%;
+  width: 26px;
+  height: 22px;
+  background: #c0c0a0;
+  border: 1px solid #888866;
+  box-shadow:
+    60px -2px 0 #d8d8b8,
+    120px -4px 0 #b8b8a0,
+    -40px 2px 0 #c8c8a8;
+}
+
+.boss-floating-books {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.floating-book {
+  position: absolute;
+  font-size: 22px;
+  animation: floatBook 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(120, 220, 160, 0.4));
+}
+
+.book-0 { top: 30px; left: 30%; animation-delay: 0s; }
+.book-1 { top: 60px; right: 28%; animation-delay: 0.6s; }
+.book-2 { top: 100px; left: 22%; animation-delay: 1.2s; }
+.book-3 { top: 40px; left: 55%; animation-delay: 1.8s; font-size: 18px; }
+.book-4 { top: 130px; right: 22%; animation-delay: 2.4s; font-size: 18px; }
+.book-5 { top: 80px; left: 70%; animation-delay: 3s; font-size: 20px; }
+
+@keyframes floatBook {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-14px) rotate(6deg); }
+}
+
+.boss-figure {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+}
+
+.boss-aura {
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(120, 220, 160, 0.45), transparent 70%);
+  animation: auraPulse 2.4s ease-in-out infinite;
+}
+
+.boss-enraged .boss-aura {
+  background:
+    radial-gradient(circle, rgba(180, 120, 220, 0.55), transparent 70%);
+  animation-duration: 1.4s;
+}
+
+@keyframes auraPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.boss-icon {
+  font-size: 84px;
+  filter: drop-shadow(0 0 18px rgba(120, 220, 160, 0.7));
+  position: relative;
+  z-index: 2;
+}
+
+/* === Info panel === */
+.boss-info {
+  padding: 14px 18px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.boss-name-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.boss-name {
+  font-family: 'Georgia', serif;
+  font-size: 20px;
+  color: #f0e3a8;
+  letter-spacing: 0.04em;
+}
+
+.boss-title {
+  font-size: 12px;
+  color: #9aa090;
+  font-style: italic;
+}
+
+.boss-phase-tag {
+  background: linear-gradient(180deg, #2a4a36, #16271d);
+  border: 1px solid #79e09a;
+  color: #79e09a;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  animation: phaseBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes phaseBlink {
+  0%, 100% { box-shadow: 0 0 0 rgba(121, 224, 154, 0); }
+  50% { box-shadow: 0 0 18px rgba(121, 224, 154, 0.6); }
+}
+
+.boss-hp-bar {
+  position: relative;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.boss-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6a1820 0%, #c0392b 60%, #ff7766 100%);
+  transition: width 0.4s ease;
+}
+
+.boss-enraged .boss-hp-fill {
+  background: linear-gradient(90deg, #441860 0%, #8e44ad 60%, #c080ff 100%);
+}
+
+.boss-hp-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+}
+
+.boss-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 22px;
+}
+
+.boss-status-empty {
+  color: #555;
+  font-size: 12px;
+}

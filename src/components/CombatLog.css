@@ -1,0 +1,69 @@
+.combat-log {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(15, 17, 18, 0.98), rgba(6, 7, 9, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+}
+
+.combat-log-header {
+  font-family: 'Georgia', serif;
+  font-size: 13px;
+  color: #d8c98a;
+  padding: 10px 14px;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.combat-log-body {
+  padding: 10px 12px;
+  flex: 1;
+  overflow-y: auto;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.combat-log-empty {
+  color: #555;
+  font-style: italic;
+}
+
+.combat-log-entry {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  color: #b8bcb4;
+  word-break: break-word;
+}
+
+.log-turn {
+  color: #66705f;
+  flex-shrink: 0;
+  width: 28px;
+  font-weight: bold;
+}
+
+.combat-log-entry.log-damage .log-text { color: #ff9988; }
+.combat-log-entry.log-heal .log-text { color: #88e0a8; }
+.combat-log-entry.log-status .log-text { color: #c08fff; }
+.combat-log-entry.log-death .log-text { color: #ff5566; font-weight: bold; }
+.combat-log-entry.log-phase .log-text { color: #79e09a; font-weight: bold; }
+.combat-log-entry.log-boss .log-text { color: #e0c890; }
+.combat-log-entry.log-info .log-text { color: #c0c5b8; }
+
+/* Petite barre de défilement */
+.combat-log-body::-webkit-scrollbar {
+  width: 6px;
+}
+.combat-log-body::-webkit-scrollbar-thumb {
+  background: rgba(216, 201, 138, 0.25);
+  border-radius: 3px;
+}
+.combat-log-body::-webkit-scrollbar-track {
+  background: transparent;
+}
