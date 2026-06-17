@@ -35,6 +35,9 @@ export function createInitialState(): GameState {
     logCounter: 0,
     damageTicks: {},
     healTicks: {},
+    attackTicks: {},
+    lastDamage: {},
+    lastHeal: {},
   };
 }
 
@@ -67,16 +70,24 @@ function pushLog(state: GameState, entry: Omit<CombatLogEntry, 'id'>): GameState
   return { ...state, log };
 }
 
-function bumpDamageTick(state: GameState, id: string): GameState {
+function bumpDamageTick(state: GameState, id: string, amount: number): GameState {
   return {
     ...state,
     damageTicks: { ...state.damageTicks, [id]: (state.damageTicks[id] || 0) + 1 },
+    lastDamage: { ...state.lastDamage, [id]: amount },
   };
 }
-function bumpHealTick(state: GameState, id: string): GameState {
+function bumpHealTick(state: GameState, id: string, amount: number): GameState {
   return {
     ...state,
     healTicks: { ...state.healTicks, [id]: (state.healTicks[id] || 0) + 1 },
+    lastHeal: { ...state.lastHeal, [id]: amount },
+  };
+}
+function bumpAttackTick(state: GameState, id: string): GameState {
+  return {
+    ...state,
+    attackTicks: { ...state.attackTicks, [id]: (state.attackTicks[id] || 0) + 1 },
   };
 }
 
@@ -109,7 +120,7 @@ export function applyDamage(
     const newHp = Math.max(0, target.hp - damage);
     const alive = newHp > 0;
     next = updateCharacter(next, targetId, () => ({ hp: newHp, alive }));
-    next = bumpDamageTick(next, targetId);
+    next = bumpDamageTick(next, targetId, damage);
     next = pushLog(next, {
       turn: state.turn,
       text: `${meta.crit ? '💥 CRITIQUE ! ' : ''}${meta.source} inflige ${damage} dégâts à ${target.name}.`,
@@ -126,7 +137,7 @@ export function applyDamage(
     const newHp = Math.max(0, target.hp - damage);
     const alive = newHp > 0;
     next = { ...next, boss: { ...next.boss, hp: newHp, alive } };
-    next = bumpDamageTick(next, targetId);
+    next = bumpDamageTick(next, targetId, damage);
     next = pushLog(next, {
       turn: state.turn,
       text: `${meta.crit ? '💥 CRITIQUE ! ' : ''}${meta.source} inflige ${damage} dégâts au boss.`,
@@ -161,7 +172,7 @@ export function applyHeal(
     const healed = Math.min(target.maxHp, target.hp + Math.round(amount));
     const gained = healed - target.hp;
     next = updateCharacter(next, targetId, () => ({ hp: healed }));
-    next = bumpHealTick(next, targetId);
+    next = bumpHealTick(next, targetId, gained);
     next = pushLog(next, {
       turn: state.turn,
       text: `💚 ${source} soigne ${target.name} de ${gained} PV.`,
@@ -321,7 +332,8 @@ export function executeAbility(
     isBoss,
   };
 
-  let next = pushLog(state, {
+  let next = bumpAttackTick(state, casterId);
+  next = pushLog(next, {
     turn: state.turn,
     text: `${ability.icon} ${caster.name} utilise « ${ability.name} ».`,
     kind: isBoss ? 'boss' : 'info',

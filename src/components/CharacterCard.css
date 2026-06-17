@@ -3,9 +3,9 @@
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  background: linear-gradient(180deg, rgba(20, 22, 24, 0.95), rgba(8, 9, 10, 0.95));
+  gap: 8px;
+  padding: 8px 12px 12px;
+  background: linear-gradient(180deg, rgba(20, 22, 24, 0.92), rgba(8, 9, 10, 0.96));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-left: 3px solid var(--accent, #888);
   border-radius: 8px;
@@ -37,20 +37,20 @@
 }
 
 .char-card.char-flash-dmg {
-  animation: flashDmg 0.35s ease-out;
+  animation: flashDmg 0.38s ease-out;
 }
 
 .char-card.char-flash-heal {
-  animation: flashHeal 0.35s ease-out;
+  animation: flashHeal 0.38s ease-out;
 }
 
 @keyframes flashDmg {
-  0% { background-color: rgba(220, 60, 60, 0.55); }
+  0% { background-color: rgba(220, 60, 60, 0.6); }
   100% { background-color: transparent; }
 }
 
 @keyframes flashHeal {
-  0% { background-color: rgba(80, 200, 120, 0.45); }
+  0% { background-color: rgba(80, 200, 120, 0.5); }
   100% { background-color: transparent; }
 }
 
@@ -63,26 +63,112 @@
   50% { box-shadow: 0 0 18px rgba(220, 80, 80, 0.45); }
 }
 
+/* === Sprite === */
+.char-sprite-wrap {
+  position: relative;
+  width: 100%;
+  height: 170px;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+  animation: charIdle 3.6s ease-in-out infinite;
+}
+
+@keyframes charIdle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.char-sprite-wrap.char-attacking {
+  animation: charLunge 0.5s ease-out;
+}
+
+@keyframes charLunge {
+  0% { transform: translate(0, 0) scale(1); }
+  35% { transform: translate(0, -16px) scale(1.08); filter: brightness(1.4); }
+  70% { transform: translate(0, 4px) scale(0.98); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+.char-sprite-wrap.char-shake {
+  animation: charShake 0.38s ease-in-out;
+}
+
+@keyframes charShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.sprite-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.char-sprite-shadow {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%);
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+/* === Chiffres flottants === */
+.float-num {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Georgia', serif;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow:
+    0 0 4px rgba(0, 0, 0, 0.9),
+    1px 1px 0 rgba(0, 0, 0, 0.9),
+    -1px 1px 0 rgba(0, 0, 0, 0.9),
+    1px -1px 0 rgba(0, 0, 0, 0.9),
+    -1px -1px 0 rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  animation: floatUp 1.2s ease-out forwards;
+  z-index: 10;
+}
+
+.float-dmg { color: #ff5566; }
+.float-heal { color: #79e09a; }
+
+@keyframes floatUp {
+  0% { transform: translate(-50%, 20px) scale(0.6); opacity: 0; }
+  15% { transform: translate(-50%, 0) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -60px) scale(1); opacity: 0; }
+}
+
+/* === Header / nom === */
 .char-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.char-icon {
-  font-size: 26px;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.15));
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .char-name {
   font-family: 'Georgia', serif;
-  font-size: 17px;
+  font-size: 16px;
   color: #f0e3a8;
   letter-spacing: 0.03em;
 }
 
 .char-class {
-  font-size: 12px;
+  font-size: 11px;
   color: #888d85;
 }
 
@@ -133,19 +219,17 @@
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.5);
   color: #e0a0a0;
   font-family: 'Georgia', serif;
   font-size: 18px;
   letter-spacing: 0.18em;
-  border-radius: 8px;
+  border-radius: 6px;
   pointer-events: none;
+  z-index: 5;
 }
 
 .char-active-indicator {
-  position: absolute;
-  top: -10px;
-  right: 8px;
   background: #f0e3a8;
   color: #1a1a1d;
   font-size: 10px;
@@ -154,4 +238,5 @@
   padding: 3px 8px;
   border-radius: 999px;
   box-shadow: 0 0 14px rgba(216, 201, 138, 0.7);
+  white-space: nowrap;
 }

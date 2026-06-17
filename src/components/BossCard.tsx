@@ -1,25 +1,55 @@
 import { useEffect, useState } from 'react';
 import type { Boss } from '../game/types';
 import { StatusBadge } from './StatusBadge';
+import { BossSprite } from './sprites/BossSprite';
+import { ArenaBackground } from './sprites/ArenaBackground';
 import './BossCard.css';
 
 interface Props {
   boss: Boss;
   damageTick: number;
+  attackTick: number;
+  lastDamage: number;
   isTargetable: boolean;
   onSelect?: () => void;
 }
 
-export function BossCard({ boss, damageTick, isTargetable, onSelect }: Props) {
+interface Floater {
+  id: number;
+  value: number;
+}
+
+let bossFloaterCounter = 0;
+
+export function BossCard({
+  boss,
+  damageTick,
+  attackTick,
+  lastDamage,
+  isTargetable,
+  onSelect,
+}: Props) {
   const pct = Math.max(0, (boss.hp / boss.maxHp) * 100);
   const [flash, setFlash] = useState(false);
+  const [attacking, setAttacking] = useState(false);
+  const [floaters, setFloaters] = useState<Floater[]>([]);
 
   useEffect(() => {
     if (damageTick === 0) return;
     setFlash(true);
-    const t = setTimeout(() => setFlash(false), 350);
+    const id = ++bossFloaterCounter;
+    setFloaters((fs) => [...fs, { id, value: lastDamage }]);
+    const t1 = setTimeout(() => setFlash(false), 400);
+    const t2 = setTimeout(() => setFloaters((fs) => fs.filter((f) => f.id !== id)), 1400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [damageTick, lastDamage]);
+
+  useEffect(() => {
+    if (attackTick === 0) return;
+    setAttacking(true);
+    const t = setTimeout(() => setAttacking(false), 600);
     return () => clearTimeout(t);
-  }, [damageTick]);
+  }, [attackTick]);
 
   const classes = [
     'boss-card',
@@ -36,18 +66,17 @@ export function BossCard({ boss, damageTick, isTargetable, onSelect }: Props) {
       onClick={isTargetable ? onSelect : undefined}
       role={isTargetable ? 'button' : undefined}
     >
-      <div className="boss-scene" aria-hidden>
-        <div className="boss-bookshelf bookshelf-left" />
-        <div className="boss-bookshelf bookshelf-right" />
-        <div className="boss-desk" />
-        <div className="boss-floating-books">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <span key={i} className={`floating-book book-${i}`}>📕</span>
+      <div className="boss-scene">
+        <ArenaBackground />
+
+        <div className={`boss-sprite-wrap ${attacking ? 'boss-attacking' : ''} ${flash ? 'boss-shake' : ''}`}>
+          <BossSprite enraged={boss.enraged} />
+
+          {floaters.map((f) => (
+            <span key={f.id} className="float-num float-dmg float-boss">
+              -{f.value}
+            </span>
           ))}
-        </div>
-        <div className="boss-figure">
-          <div className="boss-aura" />
-          <div className="boss-icon">{boss.icon}</div>
         </div>
       </div>
 

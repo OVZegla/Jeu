@@ -55,6 +55,8 @@ export function BattleScreen({
           <BossCard
             boss={state.boss}
             damageTick={state.damageTicks[state.boss.id] || 0}
+            attackTick={state.attackTicks[state.boss.id] || 0}
+            lastDamage={state.lastDamage[state.boss.id] || 0}
             isTargetable={bossTargetable}
             onSelect={() => onTargetSelect(state.boss.id)}
           />
@@ -86,6 +88,9 @@ export function BattleScreen({
                 isTargetable={charTargetable(c)}
                 damageTick={state.damageTicks[c.id] || 0}
                 healTick={state.healTicks[c.id] || 0}
+                attackTick={state.attackTicks[c.id] || 0}
+                lastDamage={state.lastDamage[c.id] || 0}
+                lastHeal={state.lastHeal[c.id] || 0}
                 onSelect={() => onTargetSelect(c.id)}
               />
             ))}

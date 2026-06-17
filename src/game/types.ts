@@ -127,6 +127,9 @@ export interface GameState {
   // Petits flashs visuels gérés via "ticks" qui changent à chaque hit.
   damageTicks: Record<string, number>;
   healTicks: Record<string, number>;
+  attackTicks: Record<string, number>; // déclenche l'animation d'attaque
+  lastDamage: Record<string, number>;  // montant du dernier coup reçu (pour chiffres flottants)
+  lastHeal: Record<string, number>;    // montant du dernier soin reçu
 }
 
 export interface CombatAction {
