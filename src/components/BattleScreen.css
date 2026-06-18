@@ -16,8 +16,8 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
+  gap: 8px;
+  padding: 4px 8px;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.4));
   border-bottom: 2px solid rgba(216, 201, 138, 0.3);
 }
@@ -26,30 +26,31 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  min-width: 110px;
+  gap: 0;
+  min-width: 0;
   padding: 0 4px;
 }
 
 .top-bar-turn {
   font-family: 'Georgia', serif;
-  font-size: 14px;
+  font-size: 12px;
   color: #f0e3a8;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
 }
 
 .top-bar-phase {
-  font-size: 11px;
+  font-size: 10px;
   color: #aa9088;
   font-style: italic;
   white-space: nowrap;
 }
 
 .top-bar-restart {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  font-size: 18px;
+  font-size: 16px;
   background: linear-gradient(180deg, #2a2a30, #16161a);
   color: #d8c98a;
   border: 1px solid rgba(216, 201, 138, 0.4);
@@ -130,14 +131,12 @@
 /* === BOTTOM BAR : héros | menu | log === */
 .bottom-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) 240px minmax(0, 1fr);
-  gap: 10px;
-  padding: 10px 14px;
+  grid-template-columns: minmax(0, 1.4fr) 200px minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 10px;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.75));
   border-top: 2px solid rgba(216, 201, 138, 0.3);
-  height: 200px;
-  max-height: 28vh;
-  min-height: 180px;
+  height: clamp(140px, 24vh, 200px);
 }
 
 .bottom-heroes {
