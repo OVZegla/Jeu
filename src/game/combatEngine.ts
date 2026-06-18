@@ -41,20 +41,31 @@ export function createInitialState(): GameState {
   };
 }
 
-export function startCombat(): GameState {
+// Démarre l'aventure : on commence par la scène d'exploration.
+export function startAdventure(): GameState {
   const fresh = createInitialState();
-  fresh.phase = 'playerTurn';
-  fresh.turn = 1;
-  fresh.activeCharacterIndex = 0;
-  return pushLog(fresh, {
+  fresh.phase = 'exploration';
+  return fresh;
+}
+
+// Quand Datpaloof engage le boss dans la scène d'exploration, on bascule
+// vers le combat tour par tour.
+export function engageBoss(state: GameState): GameState {
+  const next = { ...state, phase: 'playerTurn' as const, turn: 1, activeCharacterIndex: 0 };
+  return pushLog(next, {
     turn: 1,
     text: '⚔️ Le combat commence. Le Champion des Collectivités Territoriales toise vos héros.',
     kind: 'info',
   });
 }
 
+// Pour les tests / boutons de raccourci : démarrer directement en combat.
+export function startCombat(): GameState {
+  return engageBoss(startAdventure());
+}
+
 export function resetCombat(): GameState {
-  return startCombat();
+  return startAdventure();
 }
 
 // ============================================================

@@ -112,6 +112,7 @@ export interface CombatLogEntry {
 
 export type GamePhase =
   | 'start'
+  | 'exploration'
   | 'playerTurn'
   | 'bossTurn'
   | 'victory'

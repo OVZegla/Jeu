@@ -1,0 +1,128 @@
+.exploration-screen {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #050608;
+  color: #f0ecd8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.exploration-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.exploration-canvas canvas {
+  display: block;
+  touch-action: none;
+}
+
+.ex-hud-top {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: linear-gradient(180deg, rgba(18, 28, 70, 0.82), rgba(8, 14, 40, 0.88));
+  border: 2px solid #e8d8a8;
+  border-radius: 6px;
+  padding: 8px 16px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6) inset,
+    0 4px 14px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  pointer-events: none;
+  max-width: 90vw;
+}
+
+.ex-title {
+  font-family: 'Georgia', serif;
+  font-size: 16px;
+  color: #ffe080;
+  letter-spacing: 0.08em;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.ex-objective {
+  font-size: 12px;
+  color: #c8cdd8;
+  font-style: italic;
+  margin-top: 2px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.ex-controls-hint {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(232, 216, 168, 0.35);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #c8cdd8;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  max-width: 92vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.ex-key {
+  background: rgba(255, 224, 128, 0.15);
+  border: 1px solid #ffe080;
+  color: #ffe080;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-family: 'Menlo', monospace;
+  margin: 0 2px;
+}
+
+.ex-engage-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 60px;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 14px 28px;
+  background: linear-gradient(180deg, rgba(80, 20, 35, 0.92), rgba(30, 8, 16, 0.95));
+  border: 3px solid #ff7788;
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Georgia', serif;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6) inset,
+    0 0 30px rgba(255, 80, 120, 0.55);
+  animation: engagePulse 1s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes engagePulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6) inset, 0 0 18px rgba(255, 80, 120, 0.4); transform: translateX(-50%) scale(1); }
+  50% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6) inset, 0 0 42px rgba(255, 80, 120, 0.85); transform: translateX(-50%) scale(1.04); }
+}
+
+.ex-engage-btn:active {
+  transform: translateX(-50%) scale(0.98);
+}
+
+@media (max-width: 720px) {
+  .ex-controls-hint {
+    font-size: 10px;
+    bottom: 14px;
+  }
+  .ex-title { font-size: 14px; }
+  .ex-objective { font-size: 11px; }
+}
