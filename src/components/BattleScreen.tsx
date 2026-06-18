@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { Ability, Character, GameState } from '../game/types';
 import { BossStatusBar } from './BossStatusBar';
 import { BattleArena } from './BattleArena';
@@ -23,6 +24,13 @@ export function BattleScreen({
   onCancelTarget,
   onRestart,
 }: Props) {
+  const [muted, setMuted] = useState<boolean>(
+    () => typeof window !== 'undefined' && localStorage.getItem('jeu-muted') === '1'
+  );
+  useEffect(() => {
+    try { localStorage.setItem('jeu-muted', muted ? '1' : '0'); } catch { /* noop */ }
+  }, [muted]);
+
   const isPickingTarget = state.pendingTarget !== null;
   const targetingAbility = state.pendingTarget?.ability;
 
@@ -49,12 +57,21 @@ export function BattleScreen({
           isTargetable={bossTargetable}
           onSelect={() => onTargetSelect(state.boss.id)}
         />
-        <button className="top-bar-restart" onClick={onRestart}>↻</button>
+        <div className="top-bar-actions">
+          <button
+            className="top-bar-restart"
+            onClick={() => setMuted((m) => !m)}
+            title={muted ? 'Activer le son' : 'Couper le son'}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
+          <button className="top-bar-restart" onClick={onRestart} title="Recommencer">↻</button>
+        </div>
       </div>
 
       {/* === Arène plein cadre === */}
       <div className="arena-wrap">
-        <BattleArena state={state} activeHeroId={activeCharacter?.id ?? null} />
+        <BattleArena state={state} activeHeroId={activeCharacter?.id ?? null} muted={muted} />
 
         {bossTargetable && (
           <div className="overlay-hint">

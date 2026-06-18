@@ -7,6 +7,7 @@ import './BattleArena.css';
 interface Props {
   state: GameState;
   activeHeroId: string | null;
+  muted: boolean;
 }
 
 function diffTicks(
@@ -20,7 +21,7 @@ function diffTicks(
   return out;
 }
 
-export function BattleArena({ state, activeHeroId }: Props) {
+export function BattleArena({ state, activeHeroId, muted }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<BattleScene | null>(null);
@@ -34,6 +35,7 @@ export function BattleArena({ state, activeHeroId }: Props) {
       onReady: (s) => {
         sceneRef.current = s;
         s.syncFromState(state, true);
+        s.setMuted(muted);
         if (state.boss.enraged) s.setBossEnraged(true);
         for (const c of state.characters) {
           if (!c.alive) s.playDeath(c.id);
@@ -130,6 +132,11 @@ export function BattleArena({ state, activeHeroId }: Props) {
   useEffect(() => {
     sceneRef.current?.setActiveHero(activeHeroId);
   }, [activeHeroId]);
+
+  // Réagit au mute
+  useEffect(() => {
+    sceneRef.current?.setMuted(muted);
+  }, [muted]);
 
   return <div ref={containerRef} className="battle-arena" />;
 }

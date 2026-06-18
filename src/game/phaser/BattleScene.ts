@@ -36,6 +36,8 @@ export class BattleScene extends Phaser.Scene {
   private bossEnraged = false;
   private events_: BattleSceneEvents;
   private initialState: GameState | null = null;
+  private currentMusic: Phaser.Sound.BaseSound | null = null;
+  private muted = false;
 
   constructor(events: BattleSceneEvents) {
     super({ key: 'BattleScene' });
@@ -53,6 +55,35 @@ export class BattleScene extends Phaser.Scene {
     this.load.image('sprite-baghaar', `${base}assets/sprites/baghaar.png`);
     this.load.image('sprite-zlatax', `${base}assets/sprites/zlatax.png`);
     this.load.image('sprite-boss', `${base}assets/sprites/boss.png`);
+
+    // Audio : on tente de charger tout, on ignore silencieusement les fichiers manquants.
+    // Le joueur peut déposer ses propres assets dans public/assets/sfx/ et /music/
+    this.load.on('loaderror', (file: { key: string; url: string }) => {
+      if (file.url?.includes('/assets/sfx/') || file.url?.includes('/assets/music/')) {
+        // Asset audio optionnel manquant — pas grave.
+        return;
+      }
+      console.warn('Asset manquant :', file.url);
+    });
+
+    const SFX = [
+      'attack', 'hit', 'crit', 'heal', 'defend', 'special',
+      'death', 'enrage', 'victory', 'defeat', 'menu_click',
+    ];
+    for (const k of SFX) {
+      this.load.audio(`sfx-${k}`, [
+        `${base}assets/sfx/${k}.mp3`,
+        `${base}assets/sfx/${k}.ogg`,
+        `${base}assets/sfx/${k}.wav`,
+      ]);
+    }
+    const MUSIC = ['battle', 'enrage', 'victory', 'defeat'];
+    for (const k of MUSIC) {
+      this.load.audio(`music-${k}`, [
+        `${base}assets/music/${k}.mp3`,
+        `${base}assets/music/${k}.ogg`,
+      ]);
+    }
   }
 
   create() {
@@ -75,20 +106,24 @@ export class BattleScene extends Phaser.Scene {
     this.spawnAmbience(w, h);
 
     // === Boss en arrière-plan, centré, sur le trône ===
-    const bossY = h * 0.50;
+    const bossY = h * 0.55;
     this.boss = this.spawnBoss(w * 0.50, bossY);
 
-    // === 3 héros en formation au premier plan ===
-    const heroY = h * 0.88;
-    const positions: Array<{ id: HeroId; x: number; flip: boolean }> = [
-      { id: 'datpaloof', x: w * 0.22, flip: true },  // gauche, face au boss
-      { id: 'baghaar',   x: w * 0.50, flip: true },  // centre
-      { id: 'zlatax',    x: w * 0.78, flip: true },  // droite
+    // === 3 héros en formation resserrée au premier plan ===
+    // Triangle léger : centre un peu plus bas et un poil en avant
+    const heroBaseY = h * 0.90;
+    const positions: Array<{ id: HeroId; x: number; y: number; flip: boolean }> = [
+      { id: 'datpaloof', x: w * 0.38, y: heroBaseY - 6, flip: true },
+      { id: 'baghaar',   x: w * 0.50, y: heroBaseY,     flip: true },
+      { id: 'zlatax',    x: w * 0.62, y: heroBaseY - 6, flip: true },
     ];
     for (const p of positions) {
-      const v = this.spawnHero(p.id, p.x, heroY, p.flip);
+      const v = this.spawnHero(p.id, p.x, p.y, p.flip);
       this.heroes.set(p.id, v);
     }
+
+    // Lance la musique de fond (si dispo)
+    this.playMusic('battle');
 
     // État initial
     if (this.initialState) {
@@ -180,14 +215,14 @@ export class BattleScene extends Phaser.Scene {
   private spawnBoss(x: number, y: number): BossVisual {
     const sprite = this.add.image(0, 0, 'sprite-boss');
     sprite.setOrigin(0.5, 1);
-    // Adapte la taille selon la hauteur du canvas
-    const targetH = this.scale.height * 0.55;
+    const targetH = this.scale.height * 0.50;
     sprite.setScale(targetH / sprite.height);
-    const shadow = this.add.ellipse(0, 0, sprite.displayWidth * 0.55, 16, 0x000000, 0.55);
+    // Ombre calée sous les pieds : origin top, légèrement décalée bas
+    const shadow = this.add.ellipse(0, 4, sprite.displayWidth * 0.65, 14, 0x000000, 0.5);
+    shadow.setOrigin(0.5, 0);
     const container = this.add.container(x, y, [shadow, sprite]);
-    container.setDepth(50); // sous les héros
-    const v: BossVisual = { container, sprite, shadow, baseX: x, baseY: y, alive: true };
-    return v;
+    container.setDepth(50);
+    return { container, sprite, shadow, baseX: x, baseY: y, alive: true };
   }
 
   private spawnHero(id: HeroId, x: number, y: number, flip: boolean): HeroVisual {
@@ -197,7 +232,9 @@ export class BattleScene extends Phaser.Scene {
     sprite.setScale(targetH / sprite.height);
     if (flip) sprite.setFlipX(true);
 
-    const shadow = this.add.ellipse(0, 0, sprite.displayWidth * 0.55, 14, 0x000000, 0.55);
+    // Ombre calée sous les pieds (origin top → ellipse posée juste sous y=0)
+    const shadow = this.add.ellipse(0, 2, sprite.displayWidth * 0.6, 11, 0x000000, 0.5);
+    shadow.setOrigin(0.5, 0);
 
     // Petit curseur ▼ doré au-dessus de la tête (visible quand actif)
     const cursor = this.add.text(0, -sprite.displayHeight - 10, '▼', {
@@ -254,10 +291,47 @@ export class BattleScene extends Phaser.Scene {
 
   // === Animations de combat ===
 
+  // === Audio ===
+
+  playSfx(key: string, volume = 0.55) {
+    const fullKey = `sfx-${key}`;
+    if (this.muted) return;
+    if (!this.cache.audio.exists(fullKey)) return;
+    try {
+      this.sound.play(fullKey, { volume });
+    } catch {
+      // Ignore : asset peut-être pas encore décodé
+    }
+  }
+
+  playMusic(key: string, volume = 0.3) {
+    const fullKey = `music-${key}`;
+    if (!this.cache.audio.exists(fullKey)) return;
+    // Stoppe la musique précédente
+    if (this.currentMusic) {
+      this.currentMusic.stop();
+      this.currentMusic = null;
+    }
+    try {
+      const m = this.sound.add(fullKey, { loop: true, volume: this.muted ? 0 : volume });
+      m.play();
+      this.currentMusic = m;
+    } catch { /* noop */ }
+  }
+
+  setMuted(m: boolean) {
+    this.muted = m;
+    // @ts-expect-error : BaseSound a setMute en runtime
+    if (this.currentMusic) this.currentMusic.setMute?.(m);
+  }
+
+  // === Animations de combat ===
+
   playAttack(id: string, targetId: string) {
     const e = id === 'champion' ? this.boss : this.heroes.get(id);
     const t = targetId === 'champion' ? this.boss : this.heroes.get(targetId);
     if (!e || !t || !e.alive) return;
+    this.playSfx('attack');
 
     const dx = t.baseX - e.baseX;
     const lungeX = Math.sign(dx) * Math.min(80, Math.abs(dx) * 0.3);
@@ -283,6 +357,7 @@ export class BattleScene extends Phaser.Scene {
   playHit(id: string, amount: number, isCrit = false) {
     const e = id === 'champion' ? this.boss : this.heroes.get(id);
     if (!e || !e.alive) return;
+    this.playSfx(isCrit ? 'crit' : 'hit', isCrit ? 0.7 : 0.5);
     e.sprite.setTint(0xff5555);
     this.tweens.add({
       targets: e.container,
@@ -304,6 +379,7 @@ export class BattleScene extends Phaser.Scene {
   playHeal(id: string, amount: number) {
     const e = id === 'champion' ? this.boss : this.heroes.get(id);
     if (!e || !e.alive) return;
+    this.playSfx('heal');
     e.sprite.setTint(0x88ff99);
     this.tweens.add({
       targets: e.sprite,
@@ -322,6 +398,7 @@ export class BattleScene extends Phaser.Scene {
   playDeath(id: string) {
     const e = id === 'champion' ? this.boss : this.heroes.get(id);
     if (!e) return;
+    this.playSfx('death', 0.7);
     e.alive = false;
     e.sprite.setTint(0x444444);
     this.tweens.add({
@@ -351,10 +428,12 @@ export class BattleScene extends Phaser.Scene {
   setBossEnraged(enraged: boolean) {
     if (enraged === this.bossEnraged) return;
     this.bossEnraged = enraged;
+    this.playSfx('enrage', 0.8);
+    // Bascule la musique sur le thème enragé si dispo
+    if (this.cache.audio.exists('music-enrage')) this.playMusic('enrage');
     this.cameras.main.flash(400, 180, 100, 255);
     this.cameras.main.shake(700, 0.025);
     this.spawnParticles(this.boss.container.x, this.boss.container.y - this.boss.sprite.displayHeight * 0.5, 'p-magic', 60);
-    // Tint violet en continu sur le sprite boss
     this.boss.sprite.setTint(0xddaaff);
   }
 
