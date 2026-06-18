@@ -6,7 +6,6 @@ interface Props {
   character: Character | null;
   disabled: boolean;
   onAbilityClick: (a: Ability) => void;
-  position: 'left' | 'right';
 }
 
 const SLOT_LABELS: Record<MenuSlot, { label: string; icon: string }> = {
@@ -16,7 +15,7 @@ const SLOT_LABELS: Record<MenuSlot, { label: string; icon: string }> = {
   objet:   { label: 'Objets',  icon: '◊' },
 };
 
-export function BattleMenu({ character, disabled, onAbilityClick, position }: Props) {
+export function BattleMenu({ character, disabled, onAbilityClick }: Props) {
   const [subMenu, setSubMenu] = useState<'special' | null>(null);
 
   const slotAbility = useMemo(() => {
@@ -36,7 +35,7 @@ export function BattleMenu({ character, disabled, onAbilityClick, position }: Pr
 
   if (!character) {
     return (
-      <div className={`battle-menu battle-menu-${position} battle-menu-empty`}>
+      <div className="battle-menu battle-menu-empty">
         <div className="menu-title">⌛ Attente…</div>
       </div>
     );
@@ -73,7 +72,7 @@ export function BattleMenu({ character, disabled, onAbilityClick, position }: Pr
   };
 
   return (
-    <div className={`battle-menu battle-menu-${position}`}>
+    <div className="battle-menu">
       <div className="menu-title">▶ {character.name.toUpperCase()}</div>
 
       {!subMenu && (

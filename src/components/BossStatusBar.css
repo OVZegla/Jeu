@@ -1,9 +1,10 @@
 .boss-status-bar {
-  padding: 10px 14px;
-  background: linear-gradient(180deg, rgba(20, 14, 28, 0.95), rgba(8, 6, 12, 0.98));
-  border: 1px solid rgba(216, 201, 138, 0.25);
-  border-radius: 8px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, rgba(20, 14, 28, 0.85), rgba(8, 6, 12, 0.85));
+  border: 1px solid rgba(216, 201, 138, 0.35);
+  border-radius: 6px;
   transition: box-shadow 0.18s, transform 0.18s;
+  width: 100%;
 }
 
 .boss-status-bar.boss-enraged {
@@ -29,10 +30,10 @@
 
 .boss-bar-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .boss-bar-name {
@@ -62,12 +63,12 @@
 
 .boss-hp-bar {
   position: relative;
-  height: 20px;
+  height: 16px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .boss-hp-fill {
@@ -95,7 +96,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  min-height: 22px;
+  min-height: 0;
+}
+
+.boss-bar-status:empty,
+.boss-bar-status .boss-status-empty {
+  display: none;
 }
 
 .boss-status-empty {

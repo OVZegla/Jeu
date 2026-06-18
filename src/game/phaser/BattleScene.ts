@@ -5,13 +5,7 @@ interface HeroVisual {
   container: Phaser.GameObjects.Container;
   sprite: Phaser.GameObjects.Image;
   shadow: Phaser.GameObjects.Ellipse;
-  nameText: Phaser.GameObjects.Text;
-  hpBarBg: Phaser.GameObjects.Rectangle;
-  hpBarFill: Phaser.GameObjects.Rectangle;
-  hpText: Phaser.GameObjects.Text;
-  mpBarBg: Phaser.GameObjects.Rectangle;
-  mpBarFill: Phaser.GameObjects.Rectangle;
-  mpText: Phaser.GameObjects.Text;
+  cursor: Phaser.GameObjects.Text;
   baseX: number;
   baseY: number;
   alive: boolean;
@@ -106,12 +100,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private spawnAmbience(w: number, h: number) {
-    // Poussière dorée qui flotte
-    this.add.particles(0, 0, 'sprite-boss', {
-      // hack: utilise une zone, on désactive l'image via emitterFrame
-      // En réalité on a besoin d'une texture de particule. Création runtime :
-    });
-    // Pas d'asset particule custom → générée par Canvas
+    // Textures particules générées en Canvas
     const c = document.createElement('canvas');
     c.width = 8; c.height = 8;
     const ctx = c.getContext('2d')!;
@@ -218,45 +207,21 @@ export class BattleScene extends Phaser.Scene {
 
     const shadow = this.add.ellipse(0, 0, sprite.displayWidth * 0.55, 14, 0x000000, 0.55);
 
-    // Labels & barres en dessous du sprite
-    const barW = 130;
-    const barY = 18;
-    const nameText = this.add.text(0, barY - 18, '', {
-      fontFamily: '"Press Start 2P", monospace',
-      fontSize: '11px',
-      color: '#f0e3a8',
+    // Petit curseur ▼ doré au-dessus de la tête (visible quand actif)
+    const cursor = this.add.text(0, -sprite.displayHeight - 10, '▼', {
+      fontFamily: 'Georgia, serif',
+      fontSize: '28px',
+      color: '#ffe080',
       stroke: '#000',
-      strokeThickness: 3,
-    }).setOrigin(0.5);
+      strokeThickness: 4,
+    }).setOrigin(0.5, 1);
+    cursor.setVisible(false);
 
-    const hpBarBg = this.add.rectangle(0, barY + 4, barW, 9, 0x000000, 0.85).setStrokeStyle(2, 0xf0e3a8, 1);
-    const hpBarFill = this.add.rectangle(-barW / 2 + 1, barY + 4, barW - 2, 7, 0x4caf50).setOrigin(0, 0.5);
-    const hpText = this.add.text(0, barY + 4, '', {
-      fontFamily: '"Press Start 2P", monospace',
-      fontSize: '8px',
-      color: '#fff',
-      stroke: '#000',
-      strokeThickness: 2,
-    }).setOrigin(0.5);
-
-    const mpBarBg = this.add.rectangle(0, barY + 18, barW, 7, 0x000000, 0.85).setStrokeStyle(2, 0x88aaff, 1);
-    const mpBarFill = this.add.rectangle(-barW / 2 + 1, barY + 18, barW - 2, 5, 0x4488ff).setOrigin(0, 0.5);
-    const mpText = this.add.text(0, barY + 18, '', {
-      fontFamily: '"Press Start 2P", monospace',
-      fontSize: '7px',
-      color: '#fff',
-      stroke: '#000',
-      strokeThickness: 2,
-    }).setOrigin(0.5);
-
-    const container = this.add.container(x, y, [
-      shadow, sprite, nameText, hpBarBg, hpBarFill, hpText, mpBarBg, mpBarFill, mpText,
-    ]);
-    container.setDepth(100 + y); // au-dessus du boss
+    const container = this.add.container(x, y, [shadow, sprite, cursor]);
+    container.setDepth(100 + y);
 
     const v: HeroVisual = {
-      container, sprite, shadow, nameText, hpBarBg, hpBarFill, hpText,
-      mpBarBg, mpBarFill, mpText,
+      container, sprite, shadow, cursor,
       baseX: x, baseY: y, alive: true, flip,
     };
     v.bobTween = this.tweens.add({
@@ -267,44 +232,31 @@ export class BattleScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
+    // Tween indépendant qui fait pulser le curseur (suit le bob du container)
+    this.tweens.add({
+      targets: cursor,
+      y: -sprite.displayHeight - 22,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
     return v;
   }
 
   // === Sync état React → visuels Phaser ===
 
-  syncFromState(state: GameState, _initial = false) {
-    // HP/MP des héros
-    for (const c of state.characters) {
-      const v = this.heroes.get(c.id);
-      if (!v) continue;
-      v.nameText.setText(c.name.toUpperCase());
-      const barW = 130;
-      const hpPct = Math.max(0, c.hp / c.maxHp);
-      v.hpBarFill.width = Math.max(1, (barW - 2) * hpPct);
-      v.hpBarFill.fillColor = hpPct < 0.3 ? 0xc0392b : 0x4caf50;
-      v.hpText.setText(`${c.hp}/${c.maxHp}`);
-      const mpPct = Math.max(0, c.mp / c.maxMp);
-      v.mpBarFill.width = Math.max(1, (barW - 2) * mpPct);
-      v.mpText.setText(`${c.mp}/${c.maxMp} MP`);
-    }
-  }
+  // Les HP/MP sont rendus en HTML (panneau du bas) pour rester fixes.
+  // On garde cette méthode pour la compatibilité.
+  syncFromState(_state: GameState, _initial = false) { /* no-op */ }
 
   setActiveHero(id: string | null) {
     for (const [hid, v] of this.heroes) {
       if (hid === id) {
-        // Ajoute un curseur / glow
-        v.sprite.setTint(0xfff4a0);
-        this.tweens.add({
-          targets: v.sprite,
-          alpha: { from: 0.85, to: 1 },
-          duration: 500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
+        v.cursor.setVisible(true);
+        v.sprite.setTint(0xfff4c8);
       } else {
-        this.tweens.killTweensOf(v.sprite);
-        v.sprite.setAlpha(1);
+        v.cursor.setVisible(false);
         if (v.alive) v.sprite.clearTint();
       }
     }
