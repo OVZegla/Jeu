@@ -1,17 +1,21 @@
 .start-screen {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   background:
     radial-gradient(ellipse at center, rgba(60, 120, 90, 0.18), transparent 65%),
     linear-gradient(180deg, #0a0d0a 0%, #060807 100%);
-  padding: 32px;
+  padding: 24px 16px;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .start-vignette {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background:
     repeating-linear-gradient(
@@ -22,12 +26,15 @@
       transparent 4px
     );
   pointer-events: none;
+  z-index: 0;
 }
 
 .start-card {
   position: relative;
+  z-index: 1;
   max-width: 640px;
-  padding: 40px 44px;
+  width: 100%;
+  padding: 28px 24px;
   border: 1px solid rgba(180, 220, 180, 0.18);
   border-radius: 12px;
   background:
@@ -36,43 +43,45 @@
     0 0 80px rgba(40, 120, 80, 0.25),
     inset 0 0 60px rgba(0, 0, 0, 0.7);
   text-align: center;
+  margin: auto;
 }
 
 .start-sigil {
-  font-size: 56px;
-  margin-bottom: 8px;
+  font-size: 48px;
+  margin-bottom: 6px;
   filter: drop-shadow(0 0 18px rgba(120, 220, 160, 0.5));
 }
 
 .start-card h1 {
   font-family: 'Georgia', serif;
-  font-size: 32px;
+  font-size: 26px;
   color: #d8c98a;
   text-shadow: 0 0 18px rgba(120, 220, 160, 0.35);
-  margin: 0 0 16px;
+  margin: 0 0 14px;
   letter-spacing: 0.04em;
+  line-height: 1.2;
 }
 
 .start-intro {
   color: #b8c0b6;
-  line-height: 1.6;
-  font-size: 16px;
-  margin: 0 0 24px;
+  line-height: 1.5;
+  font-size: 14px;
+  margin: 0 0 18px;
 }
 
 .start-roster {
   list-style: none;
   padding: 0;
-  margin: 0 0 28px;
+  margin: 0 0 20px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   color: #c8d4c8;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .start-roster li {
   border: 1px solid rgba(180, 220, 180, 0.12);
-  padding: 8px 14px;
+  padding: 7px 12px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.02);
 }
@@ -83,9 +92,10 @@
 
 .start-button {
   font-family: 'Georgia', serif;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: 0.08em;
-  padding: 14px 30px;
+  padding: 14px 24px;
+  width: 100%;
   background: linear-gradient(180deg, #2a4a36, #16271d);
   color: #f0e3a8;
   border: 1px solid rgba(216, 201, 138, 0.5);
@@ -93,10 +103,23 @@
   cursor: pointer;
   transition: all 0.18s ease;
   box-shadow: 0 0 24px rgba(80, 180, 120, 0.2);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.start-button:hover {
+.start-button:hover,
+.start-button:active {
   transform: translateY(-1px);
   background: linear-gradient(180deg, #366044, #1b3024);
   box-shadow: 0 0 32px rgba(120, 220, 160, 0.4);
+}
+
+@media (min-width: 720px) {
+  .start-card {
+    padding: 40px 44px;
+  }
+  .start-sigil { font-size: 56px; }
+  .start-card h1 { font-size: 32px; }
+  .start-intro { font-size: 16px; }
+  .start-roster { font-size: 15px; gap: 8px; }
+  .start-button { width: auto; font-size: 18px; padding: 14px 30px; }
 }
