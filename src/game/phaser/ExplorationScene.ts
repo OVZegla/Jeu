@@ -8,11 +8,13 @@ export interface ExplorationSceneEvents {
   onEngage?: () => void;
 }
 
-const PLAYER_SPEED = 240;        // px / s
-const ENGAGE_DISTANCE = 220;     // distance min joueur ↔ boss pour engager
-const TARGET_STOP_DIST = 6;      // distance d'arrêt sur tap-to-move
-const PLAYER_TARGET_HEIGHT = 130; // hauteur d'affichage du sprite joueur
-const BOSS_TARGET_HEIGHT = 200;   // hauteur d'affichage du sprite boss
+const PLAYER_SPEED = 180;        // px / s
+const ENGAGE_DISTANCE = 150;     // distance min joueur ↔ boss pour engager
+const TARGET_STOP_DIST = 5;      // distance d'arrêt sur tap-to-move
+const PLAYER_TARGET_HEIGHT = 78;  // hauteur d'affichage du sprite joueur
+const BOSS_TARGET_HEIGHT = 118;   // hauteur d'affichage du sprite boss
+const WALK_BOUNCE_AMPLITUDE = 4;  // px max de saut vertical pendant la marche
+const WALK_BOUNCE_SPEED = 11;     // cycles par seconde du sautillement
 
 export class ExplorationScene extends Phaser.Scene {
   private events_: ExplorationSceneEvents;
@@ -31,6 +33,10 @@ export class ExplorationScene extends Phaser.Scene {
   private moveTarget: { x: number; y: number } | null = null;
   private engaged = false;
   private prompt!: Phaser.GameObjects.Text;
+  // Position logique du joueur (sans bounce visuel)
+  private logicalX = 0;
+  private logicalY = 0;
+  private walkPhase = 0;
 
   constructor(events: ExplorationSceneEvents) {
     super({ key: 'ExplorationScene' });
@@ -73,8 +79,8 @@ export class ExplorationScene extends Phaser.Scene {
 
     // === Boss au centre de la map ===
     const bossX = offsetX + this.mapW * 0.50;
-    const bossY = offsetY + this.mapH * 0.42;
-    this.bossShadow = this.add.ellipse(bossX, bossY + 4, 90, 14, 0x000000, 0.5);
+    const bossY = offsetY + this.mapH * 0.44;
+    this.bossShadow = this.add.ellipse(bossX, bossY + 3, 56, 11, 0x000000, 0.5);
     this.bossShadow.setDepth(bossY - 1);
     this.boss = this.add.image(bossX, bossY, 'ex-boss');
     this.boss.setOrigin(0.5, 1);
@@ -82,9 +88,11 @@ export class ExplorationScene extends Phaser.Scene {
     this.boss.setDepth(bossY);
 
     // === Datpaloof à un coin de la map ===
-    const startX = offsetX + this.mapW * 0.15;
-    const startY = offsetY + this.mapH * 0.82;
-    this.playerShadow = this.add.ellipse(startX, startY + 2, 60, 10, 0x000000, 0.45);
+    const startX = offsetX + this.mapW * 0.18;
+    const startY = offsetY + this.mapH * 0.80;
+    this.logicalX = startX;
+    this.logicalY = startY;
+    this.playerShadow = this.add.ellipse(startX, startY + 2, 38, 8, 0x000000, 0.45);
     this.playerShadow.setDepth(startY - 1);
     this.player = this.add.image(startX, startY, 'ex-datpaloof-front');
     this.player.setOrigin(0.5, 1);
@@ -105,9 +113,9 @@ export class ExplorationScene extends Phaser.Scene {
     // === Input tap-to-move ===
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       // Si on tape sur le boss et qu'on est assez près → engage
-      const distToBoss = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.boss.x, this.boss.y);
+      const distToBoss = Phaser.Math.Distance.Between(this.logicalX, this.logicalY, this.boss.x, this.boss.y);
       const tapDistToBoss = Phaser.Math.Distance.Between(p.worldX, p.worldY, this.boss.x, this.boss.y);
-      if (tapDistToBoss < 90 && distToBoss < ENGAGE_DISTANCE) {
+      if (tapDistToBoss < 70 && distToBoss < ENGAGE_DISTANCE) {
         this.tryEngage();
         return;
       }
@@ -163,9 +171,8 @@ export class ExplorationScene extends Phaser.Scene {
     if (keyboardActive) {
       this.moveTarget = null;
     } else if (this.moveTarget) {
-      // Move toward target
-      const dx = this.moveTarget.x - this.player.x;
-      const dy = this.moveTarget.y - this.player.y;
+      const dx = this.moveTarget.x - this.logicalX;
+      const dy = this.moveTarget.y - this.logicalY;
       const d = Math.hypot(dx, dy);
       if (d < TARGET_STOP_DIST) {
         this.moveTarget = null;
@@ -175,16 +182,19 @@ export class ExplorationScene extends Phaser.Scene {
       }
     }
 
-    // Normalise et applique la vitesse
-    if (vx !== 0 || vy !== 0) {
+    const moving = vx !== 0 || vy !== 0;
+
+    if (moving) {
+      // Normalise et applique la vitesse à la position LOGIQUE
       const norm = Math.hypot(vx, vy);
       vx /= norm; vy /= norm;
-      const moveX = vx * PLAYER_SPEED * dt;
-      const moveY = vy * PLAYER_SPEED * dt;
-      this.player.x += moveX;
-      this.player.y += moveY;
+      this.logicalX += vx * PLAYER_SPEED * dt;
+      this.logicalY += vy * PLAYER_SPEED * dt;
 
-      // Met à jour la direction du sprite selon le mouvement dominant
+      // Phase de marche pour le sautillement
+      this.walkPhase += dt * WALK_BOUNCE_SPEED;
+
+      // Direction du sprite selon le mouvement dominant
       const newDir: Dir =
         Math.abs(vx) > Math.abs(vy)
           ? (vx > 0 ? 'right' : 'left')
@@ -192,28 +202,46 @@ export class ExplorationScene extends Phaser.Scene {
       if (newDir !== this.dir) {
         this.dir = newDir;
         this.player.setTexture(`ex-datpaloof-${this.dir}`);
-        // setTexture peut changer la taille → rescale
         this.player.setScale(PLAYER_TARGET_HEIGHT / this.player.height);
       }
+    } else {
+      // Arrêt : reset progressivement la phase pour que le sprite retombe
+      this.walkPhase = 0;
     }
 
-    // Clamp dans les bornes du monde
+    // Clamp logique dans les bornes du monde
     const halfW = this.player.displayWidth / 2;
     const minX = (this.scale.width - this.worldW) / 2 + halfW;
     const maxX = (this.scale.width + this.worldW) / 2 - halfW;
     const minY = (this.scale.height - this.worldH) / 2 + this.player.displayHeight;
     const maxY = (this.scale.height + this.worldH) / 2;
-    this.player.x = Phaser.Math.Clamp(this.player.x, minX, maxX);
-    this.player.y = Phaser.Math.Clamp(this.player.y, minY, maxY);
+    this.logicalX = Phaser.Math.Clamp(this.logicalX, minX, maxX);
+    this.logicalY = Phaser.Math.Clamp(this.logicalY, minY, maxY);
 
-    // Suit l'ombre + depth
-    this.playerShadow.x = this.player.x;
-    this.playerShadow.y = this.player.y + 2;
-    this.playerShadow.setDepth(this.player.y - 1);
-    this.player.setDepth(this.player.y);
+    // === Rendu : sprite avec bounce, ombre fixée au sol ===
+    // sin² (toujours positif, fréquence double = 2 pas par cycle, sensation "vrai pas")
+    const bounce = moving
+      ? -Math.abs(Math.sin(this.walkPhase)) * WALK_BOUNCE_AMPLITUDE
+      : 0;
+    this.player.x = this.logicalX;
+    this.player.y = this.logicalY + bounce;
+    this.playerShadow.x = this.logicalX;
+    this.playerShadow.y = this.logicalY + 2;
+    // L'ombre rétrécit un peu quand le perso saute
+    if (moving) {
+      const shrink = 1 - Math.abs(bounce) / (WALK_BOUNCE_AMPLITUDE * 3);
+      this.playerShadow.scaleX = shrink;
+      this.playerShadow.setAlpha(0.45 * shrink);
+    } else {
+      this.playerShadow.scaleX = 1;
+      this.playerShadow.setAlpha(0.45);
+    }
 
-    // Détection proximité boss
-    const distToBoss = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.boss.x, this.boss.y);
+    this.player.setDepth(this.logicalY);
+    this.playerShadow.setDepth(this.logicalY - 1);
+
+    // Détection proximité boss (basée sur position logique)
+    const distToBoss = Phaser.Math.Distance.Between(this.logicalX, this.logicalY, this.boss.x, this.boss.y);
     const isNear = distToBoss < ENGAGE_DISTANCE;
     if (isNear !== this.nearBoss) {
       this.nearBoss = isNear;
@@ -222,7 +250,7 @@ export class ExplorationScene extends Phaser.Scene {
     }
     if (isNear) {
       this.prompt.x = this.boss.x;
-      this.prompt.y = this.boss.y - this.boss.displayHeight - 16;
+      this.prompt.y = this.boss.y - this.boss.displayHeight - 14;
     }
   }
 
