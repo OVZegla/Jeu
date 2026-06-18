@@ -1,27 +1,38 @@
 .boss-status-bar {
   padding: 6px 14px;
-  background: linear-gradient(180deg, rgba(20, 14, 28, 0.85), rgba(8, 6, 12, 0.85));
-  border: 1px solid rgba(216, 201, 138, 0.35);
+  background:
+    linear-gradient(180deg, rgba(40, 12, 18, 0.85), rgba(16, 6, 10, 0.92));
+  border: 2px solid #e8d8a8;
   border-radius: 6px;
-  transition: box-shadow 0.18s, transform 0.18s;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6) inset,
+    0 4px 18px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
   width: 100%;
+  color: #f0ecd8;
 }
 
 .boss-status-bar.boss-enraged {
-  border-color: #aa66ff;
-  box-shadow: 0 0 24px rgba(170, 100, 255, 0.45);
+  border-color: #c890ff;
+  background:
+    linear-gradient(180deg, rgba(60, 20, 80, 0.88), rgba(20, 8, 30, 0.95));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6) inset,
+    0 0 30px rgba(170, 100, 255, 0.5);
   animation: bossBarPulse 1.6s ease-in-out infinite;
 }
 
 @keyframes bossBarPulse {
-  0%, 100% { box-shadow: 0 0 18px rgba(170, 100, 255, 0.3); }
-  50% { box-shadow: 0 0 36px rgba(170, 100, 255, 0.6); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6) inset, 0 0 18px rgba(170, 100, 255, 0.3); }
+  50% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6) inset, 0 0 40px rgba(170, 100, 255, 0.7); }
 }
 
 .boss-status-bar.boss-targetable {
   cursor: pointer;
-  border-color: #ff5577;
-  box-shadow: 0 0 24px rgba(255, 80, 110, 0.5);
+  border-color: #ff7788;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6) inset,
+    0 0 30px rgba(255, 80, 110, 0.55);
 }
 
 .boss-status-bar.boss-targetable:hover {
@@ -38,43 +49,48 @@
 
 .boss-bar-name {
   font-family: 'Georgia', serif;
-  font-size: 17px;
-  color: #f0e3a8;
+  font-size: 16px;
+  color: #ffe080;
   letter-spacing: 0.04em;
+  text-shadow: 1px 1px 0 #000, 0 0 8px rgba(255, 224, 128, 0.4);
 }
 
 .boss-bar-title {
-  font-size: 11px;
-  color: #9aa090;
+  font-size: 10px;
+  color: #c8b8a8;
   font-style: italic;
+  text-shadow: 1px 1px 0 #000;
 }
 
 .boss-phase-tag {
-  background: linear-gradient(180deg, #4a2a6a, #2a1644);
-  border: 1px solid #aa66ff;
-  color: #d4a8ff;
+  background: linear-gradient(180deg, #6a2a90, #2a1644);
+  border: 1px solid #c890ff;
+  color: #f0d4ff;
   font-size: 10px;
   font-weight: bold;
   letter-spacing: 0.12em;
   padding: 3px 8px;
   border-radius: 4px;
   white-space: nowrap;
+  text-shadow: 1px 1px 0 #000;
 }
 
 .boss-hp-bar {
   position: relative;
-  height: 16px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid #e8d8a8;
+  border-radius: 3px;
   overflow: hidden;
   margin-bottom: 4px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
 }
 
 .boss-hp-fill {
   height: 100%;
   background: linear-gradient(90deg, #6a1820 0%, #c0392b 60%, #ff7766 100%);
   transition: width 0.4s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .boss-enraged .boss-hp-fill {
@@ -88,8 +104,9 @@
   place-items: center;
   color: #fff;
   font-family: 'Menlo', 'Consolas', monospace;
-  font-size: 11px;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+  font-size: 12px;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 1px 1px 0 #000;
+  font-weight: bold;
 }
 
 .boss-bar-status {
@@ -102,9 +119,4 @@
 .boss-bar-status:empty,
 .boss-bar-status .boss-status-empty {
   display: none;
-}
-
-.boss-status-empty {
-  color: #555;
-  font-size: 12px;
 }

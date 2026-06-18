@@ -105,13 +105,12 @@ export class BattleScene extends Phaser.Scene {
     // Particules d'ambiance (poussière + étincelles violettes)
     this.spawnAmbience(w, h);
 
-    // === Boss en arrière-plan, centré, sur le trône ===
-    const bossY = h * 0.55;
+    // === Boss en arrière-plan, centré, sous la boss bar du HUD ===
+    const bossY = h * 0.58;
     this.boss = this.spawnBoss(w * 0.50, bossY);
 
-    // === 3 héros en formation resserrée au premier plan ===
-    // Triangle léger : centre un peu plus bas et un poil en avant
-    const heroBaseY = h * 0.90;
+    // === 3 héros au premier plan, AU-DESSUS du bandeau HUD du bas ===
+    const heroBaseY = h * 0.83;
     const positions: Array<{ id: HeroId; x: number; y: number; flip: boolean }> = [
       { id: 'datpaloof', x: w * 0.38, y: heroBaseY - 6, flip: true },
       { id: 'baghaar',   x: w * 0.50, y: heroBaseY,     flip: true },
@@ -215,7 +214,8 @@ export class BattleScene extends Phaser.Scene {
   private spawnBoss(x: number, y: number): BossVisual {
     const sprite = this.add.image(0, 0, 'sprite-boss');
     sprite.setOrigin(0.5, 1);
-    const targetH = this.scale.height * 0.50;
+    // Limite la hauteur du sprite pour qu'il rentre sous la top bar
+    const targetH = Math.min(this.scale.height * 0.45, 380);
     sprite.setScale(targetH / sprite.height);
     // Ombre calée sous les pieds : origin top, légèrement décalée bas
     const shadow = this.add.ellipse(0, 4, sprite.displayWidth * 0.65, 14, 0x000000, 0.5);
@@ -228,7 +228,8 @@ export class BattleScene extends Phaser.Scene {
   private spawnHero(id: HeroId, x: number, y: number, flip: boolean): HeroVisual {
     const sprite = this.add.image(0, 0, `sprite-${id}`);
     sprite.setOrigin(0.5, 1);
-    const targetH = this.scale.height * 0.40;
+    // Hauteur héros plus mesurée pour laisser de la place au boss + HUD
+    const targetH = Math.min(this.scale.height * 0.32, 260);
     sprite.setScale(targetH / sprite.height);
     if (flip) sprite.setFlipX(true);
 

@@ -1,25 +1,27 @@
 .battle-menu {
   width: 100%;
-  height: 100%;
-  background: linear-gradient(180deg, rgba(20, 14, 28, 0.96), rgba(8, 6, 14, 0.98));
-  border: 3px solid #f0e3a8;
-  border-radius: 4px;
+  min-height: 100%;
+  background:
+    linear-gradient(180deg, rgba(18, 28, 70, 0.82), rgba(8, 14, 40, 0.88));
+  border: 2px solid #e8d8a8;
+  border-radius: 6px;
   padding: 8px 8px;
   box-shadow:
-    0 0 0 2px #1a1410 inset,
-    0 4px 14px rgba(0, 0, 0, 0.6);
-  font-family: '"Press Start 2P", "Courier New", monospace';
-  image-rendering: pixelated;
+    0 0 0 1px rgba(0, 0, 0, 0.6) inset,
+    0 4px 14px rgba(0, 0, 0, 0.5);
+  font-family: 'Georgia', serif;
+  color: #f0ecd8;
   overflow-y: auto;
 }
 
 .battle-menu-empty {
-  border-color: rgba(216, 201, 138, 0.4);
-  box-shadow: 0 0 0 2px #1a1410 inset, 0 0 0 4px rgba(216, 201, 138, 0.4);
+  border-color: rgba(232, 216, 168, 0.4);
   text-align: center;
-  font-size: 11px;
-  color: #c0bfb8;
-  padding: 16px;
+  font-size: 12px;
+  color: #aab0c8;
+  padding: 14px;
+  display: grid;
+  place-items: center;
 }
 
 .menu-title {
@@ -28,22 +30,21 @@
   text-align: left;
   padding: 4px 6px 8px;
   letter-spacing: 0.08em;
-  border-bottom: 2px solid rgba(240, 227, 168, 0.3);
+  border-bottom: 1px solid rgba(232, 216, 168, 0.35);
   margin-bottom: 6px;
   text-shadow: 1px 1px 0 #000;
-  font-family: 'Georgia', serif;
   font-weight: bold;
 }
 
 .menu-subtitle {
   font-size: 11px;
-  color: #aa88ff;
+  color: #c890ff;
   text-align: center;
-  padding: 4px;
+  padding: 2px 4px 6px;
   letter-spacing: 0.12em;
   margin-bottom: 4px;
   text-shadow: 1px 1px 0 #000;
-  font-family: 'Georgia', serif;
+  font-weight: bold;
 }
 
 .menu-slots {
@@ -52,7 +53,7 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .menu-item {
@@ -60,46 +61,56 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   background: transparent;
   border: none;
-  color: #e8e0c8;
+  color: #f0ecd8;
   font-family: inherit;
-  font-size: 11px;
-  letter-spacing: 0.05em;
+  font-size: 13px;
+  letter-spacing: 0.04em;
   cursor: pointer;
   text-align: left;
   text-shadow: 1px 1px 0 #000;
   transition: background 0.1s, color 0.1s;
-  border-radius: 2px;
+  border-radius: 3px;
+  position: relative;
 }
 
 .menu-item:hover:not(:disabled) {
-  background: linear-gradient(90deg, rgba(240, 227, 168, 0.18), transparent);
+  background: linear-gradient(90deg, rgba(255, 224, 128, 0.22), transparent);
   color: #ffe080;
 }
 
-.menu-item:hover:not(:disabled) .menu-label::before {
-  content: '▶ ';
+.menu-item:hover:not(:disabled)::before {
+  content: '▶';
+  position: absolute;
+  left: -4px;
   color: #ffe080;
+  animation: cursorBlink 0.6s ease-in-out infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .menu-item:disabled {
-  color: #555;
+  color: #666;
   cursor: not-allowed;
 }
 
 .menu-item-sub {
-  font-size: 10px;
+  font-size: 12px;
   padding: 6px 8px;
 }
 
 .menu-icon {
   display: inline-block;
-  width: 14px;
+  width: 16px;
   color: #ffe080;
   text-align: center;
   flex-shrink: 0;
+  font-size: 13px;
 }
 
 .menu-item:disabled .menu-icon {
@@ -111,34 +122,38 @@
 }
 
 .menu-cost {
-  font-size: 9px;
+  font-size: 10px;
   color: #88aaff;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   padding: 2px 5px;
   border-radius: 2px;
   letter-spacing: 0;
+  font-family: 'Menlo', monospace;
+  text-shadow: none;
 }
 
 .menu-cost-low {
-  color: #ff5566;
+  color: #ff7788;
 }
 
 .menu-cd {
-  font-size: 9px;
+  font-size: 10px;
   color: #ff9988;
-  background: rgba(60, 0, 0, 0.5);
+  background: rgba(60, 0, 0, 0.6);
   padding: 2px 5px;
   border-radius: 2px;
+  font-family: 'Menlo', monospace;
+  text-shadow: none;
 }
 
 .menu-arrow {
   color: #ffe080;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .menu-back {
   margin-top: 4px;
-  border-top: 1px solid rgba(240, 227, 168, 0.2);
+  border-top: 1px solid rgba(232, 216, 168, 0.25);
   padding-top: 6px;
-  color: #8a8a78;
+  color: #aab0c8;
 }
