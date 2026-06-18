@@ -315,6 +315,13 @@ function computeAbilityDamage(
   return { value: Math.round(value), crit };
 }
 
+export function canCastAbility(caster: Character | Boss, ability: Ability): boolean {
+  if (!caster.alive) return false;
+  if ((caster.cooldowns[ability.id] || 0) > 0) return false;
+  if (isCharacter(caster) && ability.mpCost > 0 && caster.mp < ability.mpCost) return false;
+  return true;
+}
+
 export function executeAbility(
   state: GameState,
   casterId: string,
@@ -323,6 +330,15 @@ export function executeAbility(
 ): GameState {
   const caster = findEntity(state, casterId);
   if (!caster || !caster.alive) return state;
+  if (!canCastAbility(caster, ability)) return state;
+
+  // Déduit le coût MP du caster (uniquement pour les personnages)
+  let next0 = state;
+  if (isCharacter(caster) && ability.mpCost > 0) {
+    const newMp = Math.max(0, caster.mp - ability.mpCost);
+    next0 = updateCharacter(next0, casterId, () => ({ mp: newMp }));
+  }
+  state = next0;
 
   const isBoss = !isCharacter(caster);
   const ctx: ExecutionContext = {
@@ -478,10 +494,19 @@ function tickAllStatusDurations(state: GameState): GameState {
   return next;
 }
 
+function regenMp(state: GameState): GameState {
+  const characters = state.characters.map((c) => {
+    if (!c.alive) return c;
+    return { ...c, mp: Math.min(c.maxMp, c.mp + c.mpRegen) };
+  });
+  return { ...state, characters };
+}
+
 export function endOfRoundTick(state: GameState): GameState {
   let next = tickDotsAndHots(state);
   next = reduceCooldowns(next);
   next = tickAllStatusDurations(next);
+  next = regenMp(next);
   return next;
 }
 

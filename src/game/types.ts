@@ -36,6 +36,8 @@ export type AbilityCategory =
   | 'debuff'
   | 'defense';
 
+export type MenuSlot = 'attaque' | 'defense' | 'special' | 'objet';
+
 export interface Ability {
   id: string;
   name: string;
@@ -44,6 +46,8 @@ export interface Ability {
   target: TargetType;
   cooldown: number;        // tours de cooldown après usage
   basePower: number;       // dégâts ou soin de base
+  mpCost: number;          // coût en MP (0 = gratuit)
+  menuSlot: MenuSlot;      // dans quel slot du menu FF-style cette compétence apparaît
   selfCost?: number;       // PV perdus par l'utilisateur (Soin interdit, Pacte)
   applies?: StatusEffectTemplate[]; // effets appliqués à la cible
   appliesToCaster?: StatusEffectTemplate[]; // effets appliqués à soi
@@ -68,6 +72,9 @@ export interface Character {
   description: string;
   maxHp: number;
   hp: number;
+  maxMp: number;
+  mp: number;
+  mpRegen: number;          // MP regen par tour
   defense: number;          // 0..0.9 réduction plate
   magicPower: number;       // multiplicateur dégâts magiques
   physicalPower: number;    // multiplicateur dégâts physiques

@@ -2,6 +2,7 @@ import type { Ability } from '../game/types';
 import { BALANCE } from '../game/balance';
 
 const A = BALANCE.abilities;
+const MP = BALANCE.mpCosts;
 
 // === Datpaloof ===
 export const jugement: Ability = {
@@ -12,6 +13,8 @@ export const jugement: Ability = {
   target: 'enemy',
   cooldown: A.jugement.cooldown,
   basePower: A.jugement.power,
+  mpCost: MP.jugement,
+  menuSlot: 'attaque',
   icon: '⚖️',
   applies: [
     {
@@ -33,6 +36,8 @@ export const bouclierDivin: Ability = {
   target: 'self',
   cooldown: A.bouclierDivin.cooldown,
   basePower: 0,
+  mpCost: MP.bouclierDivin,
+  menuSlot: 'defense',
   icon: '🛡️',
   appliesToCaster: [
     {
@@ -54,6 +59,8 @@ export const soinsRapides: Ability = {
   target: 'ally',
   cooldown: A.soinsRapides.cooldown,
   basePower: A.soinsRapides.power,
+  mpCost: MP.soinsRapides,
+  menuSlot: 'special',
   icon: '✨',
 };
 
@@ -65,6 +72,8 @@ export const consecration: Ability = {
   target: 'enemy',
   cooldown: A.consecration.cooldown,
   basePower: 0,
+  mpCost: MP.consecration,
+  menuSlot: 'special',
   icon: '🔆',
   applies: [
     {
@@ -87,27 +96,6 @@ export const consecration: Ability = {
 };
 
 // === Baghaar ===
-export const totemDeSoin: Ability = {
-  id: 'totemDeSoin',
-  name: 'Totem de soin',
-  description: "Pose un totem qui soigne légèrement toute l'équipe pendant 3 tours.",
-  category: 'heal',
-  target: 'allAllies',
-  cooldown: A.totemDeSoin.cooldown,
-  basePower: 0,
-  icon: '🪵',
-  applies: [
-    {
-      type: 'hot',
-      name: 'Totem de soin',
-      description: `+${A.totemDeSoin.power} PV/tour`,
-      duration: A.totemDeSoin.duration,
-      value: A.totemDeSoin.power,
-      icon: '🌿',
-    },
-  ],
-};
-
 export const dechargeOcculte: Ability = {
   id: 'dechargeOcculte',
   name: 'Décharge occulte',
@@ -116,6 +104,8 @@ export const dechargeOcculte: Ability = {
   target: 'enemy',
   cooldown: A.dechargeOcculte.cooldown,
   basePower: A.dechargeOcculte.power,
+  mpCost: MP.dechargeOcculte,
+  menuSlot: 'attaque',
   icon: '🌑',
   applies: [
     {
@@ -129,6 +119,29 @@ export const dechargeOcculte: Ability = {
   ],
 };
 
+export const totemDeSoin: Ability = {
+  id: 'totemDeSoin',
+  name: 'Totem de soin',
+  description: "Pose un totem qui soigne légèrement toute l'équipe pendant 3 tours.",
+  category: 'heal',
+  target: 'allAllies',
+  cooldown: A.totemDeSoin.cooldown,
+  basePower: 0,
+  mpCost: MP.totemDeSoin,
+  menuSlot: 'defense',
+  icon: '🪵',
+  applies: [
+    {
+      type: 'hot',
+      name: 'Totem de soin',
+      description: `+${A.totemDeSoin.power} PV/tour`,
+      duration: A.totemDeSoin.duration,
+      value: A.totemDeSoin.power,
+      icon: '🌿',
+    },
+  ],
+};
+
 export const chaineDEclairs: Ability = {
   id: 'chaineDEclairs',
   name: "Chaîne d'éclairs",
@@ -137,6 +150,8 @@ export const chaineDEclairs: Ability = {
   target: 'enemy',
   cooldown: A.chaineDEclairs.cooldown,
   basePower: A.chaineDEclairs.power,
+  mpCost: MP.chaineDEclairs,
+  menuSlot: 'special',
   critChance: A.chaineDEclairs.critChance,
   variance: A.chaineDEclairs.variance,
   icon: '⚡',
@@ -150,6 +165,8 @@ export const soinInterdit: Ability = {
   target: 'ally',
   cooldown: A.soinInterdit.cooldown,
   basePower: A.soinInterdit.power,
+  mpCost: MP.soinInterdit,
+  menuSlot: 'special',
   selfCost: A.soinInterdit.selfCost,
   icon: '🩸',
 };
@@ -163,41 +180,10 @@ export const entailleInfernale: Ability = {
   target: 'enemy',
   cooldown: A.entailleInfernale.cooldown,
   basePower: A.entailleInfernale.power,
+  mpCost: MP.entailleInfernale,
+  menuSlot: 'attaque',
   variance: A.entailleInfernale.variance,
   icon: '🗡️',
-};
-
-export const rueeDemoniaque: Ability = {
-  id: 'rueeDemoniaque',
-  name: 'Ruée démoniaque',
-  description: "Frappe lourde avec haute chance de critique.",
-  category: 'attack',
-  target: 'enemy',
-  cooldown: A.rueeDemoniaque.cooldown,
-  basePower: A.rueeDemoniaque.power,
-  critChance: A.rueeDemoniaque.critChance,
-  icon: '💢',
-};
-
-export const marqueDuTraque: Ability = {
-  id: 'marqueDuTraque',
-  name: 'Marque du traqué',
-  description: "Le boss reçoit plus de dégâts pendant 2 tours.",
-  category: 'debuff',
-  target: 'enemy',
-  cooldown: A.marqueDuTraque.cooldown,
-  basePower: 0,
-  icon: '🎯',
-  applies: [
-    {
-      type: 'marked',
-      name: 'Marque du traqué',
-      description: `+${Math.round(A.marqueDuTraque.markedValue * 100)}% dégâts subis`,
-      duration: A.marqueDuTraque.markedDuration,
-      value: A.marqueDuTraque.markedValue,
-      icon: '🎯',
-    },
-  ],
 };
 
 export const pacteInstable: Ability = {
@@ -208,6 +194,8 @@ export const pacteInstable: Ability = {
   target: 'self',
   cooldown: A.pacteInstable.cooldown,
   basePower: 0,
+  mpCost: MP.pacteInstable,
+  menuSlot: 'defense',
   icon: '😈',
   appliesToCaster: [
     {
@@ -229,7 +217,44 @@ export const pacteInstable: Ability = {
   ],
 };
 
-// === Boss ===
+export const rueeDemoniaque: Ability = {
+  id: 'rueeDemoniaque',
+  name: 'Ruée démoniaque',
+  description: "Frappe lourde avec haute chance de critique.",
+  category: 'attack',
+  target: 'enemy',
+  cooldown: A.rueeDemoniaque.cooldown,
+  basePower: A.rueeDemoniaque.power,
+  mpCost: MP.rueeDemoniaque,
+  menuSlot: 'special',
+  critChance: A.rueeDemoniaque.critChance,
+  icon: '💢',
+};
+
+export const marqueDuTraque: Ability = {
+  id: 'marqueDuTraque',
+  name: 'Marque du traqué',
+  description: "Le boss reçoit plus de dégâts pendant 2 tours.",
+  category: 'debuff',
+  target: 'enemy',
+  cooldown: A.marqueDuTraque.cooldown,
+  basePower: 0,
+  mpCost: MP.marqueDuTraque,
+  menuSlot: 'special',
+  icon: '🎯',
+  applies: [
+    {
+      type: 'marked',
+      name: 'Marque du traqué',
+      description: `+${Math.round(A.marqueDuTraque.markedValue * 100)}% dégâts subis`,
+      duration: A.marqueDuTraque.markedDuration,
+      value: A.marqueDuTraque.markedValue,
+      icon: '🎯',
+    },
+  ],
+};
+
+// === Boss (le boss n'utilise pas le menu, donc menuSlot et mpCost sont "neutres") ===
 const B = BALANCE.bossAbilities;
 
 export const tamponReglementaire: Ability = {
@@ -240,6 +265,8 @@ export const tamponReglementaire: Ability = {
   target: 'ally',
   cooldown: B.tamponReglementaire.cooldown,
   basePower: B.tamponReglementaire.power,
+  mpCost: 0,
+  menuSlot: 'attaque',
   variance: B.tamponReglementaire.variance,
   icon: '📜',
 };
@@ -252,6 +279,8 @@ export const appelDOffresMaudit: Ability = {
   target: 'allAllies',
   cooldown: B.appelDOffresMaudit.cooldown,
   basePower: B.appelDOffresMaudit.power,
+  mpCost: 0,
+  menuSlot: 'attaque',
   icon: '📑',
 };
 
@@ -263,6 +292,8 @@ export const decretIncomprehensible: Ability = {
   target: 'allAllies',
   cooldown: B.decretIncomprehensible.cooldown,
   basePower: 0,
+  mpCost: 0,
+  menuSlot: 'special',
   icon: '📕',
   applies: [
     {
@@ -284,6 +315,8 @@ export const reunionInterminable: Ability = {
   target: 'ally',
   cooldown: B.reunionInterminable.cooldown,
   basePower: 0,
+  mpCost: 0,
+  menuSlot: 'special',
   icon: '💤',
   applies: [
     {
@@ -305,6 +338,8 @@ export const subventionRefusee: Ability = {
   target: 'ally',
   cooldown: B.subventionRefusee.cooldown,
   basePower: B.subventionRefusee.power,
+  mpCost: 0,
+  menuSlot: 'attaque',
   icon: '💸',
 };
 
@@ -316,5 +351,7 @@ export const archivageDefinitif: Ability = {
   target: 'allAllies',
   cooldown: B.archivageDefinitif.cooldown,
   basePower: B.archivageDefinitif.power,
+  mpCost: 0,
+  menuSlot: 'special',
   icon: '📚',
 };

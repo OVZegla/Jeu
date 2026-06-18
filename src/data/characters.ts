@@ -17,6 +17,9 @@ import {
 
 const C = BALANCE.characters;
 
+// Note : l'ordre des abilities suit les slots du menu :
+// [0]=attaque, [1]=defense, [2]=special, [3]=special.
+
 export function createInitialCharacters(): Character[] {
   return [
     {
@@ -27,6 +30,9 @@ export function createInitialCharacters(): Character[] {
         "Paladin blond à l'armure rouge. Lumière, protection et justice flamboyante.",
       maxHp: C.datpaloof.maxHp,
       hp: C.datpaloof.maxHp,
+      maxMp: C.datpaloof.maxMp,
+      mp: C.datpaloof.maxMp,
+      mpRegen: C.datpaloof.mpRegen,
       defense: C.datpaloof.defense,
       physicalPower: C.datpaloof.physicalPower,
       magicPower: C.datpaloof.magicPower,
@@ -40,15 +46,18 @@ export function createInitialCharacters(): Character[] {
     {
       id: 'baghaar',
       name: 'Baghaar',
-      className: 'Chaman occultiste Mag\'har',
+      className: "Chaman occultiste Mag'har",
       description:
         "Orc à peau brune, totems et magie sombre. Mélange spiritualité ancestrale et occultisme.",
       maxHp: C.baghaar.maxHp,
       hp: C.baghaar.maxHp,
+      maxMp: C.baghaar.maxMp,
+      mp: C.baghaar.maxMp,
+      mpRegen: C.baghaar.mpRegen,
       defense: C.baghaar.defense,
       physicalPower: C.baghaar.physicalPower,
       magicPower: C.baghaar.magicPower,
-      abilities: [totemDeSoin, dechargeOcculte, chaineDEclairs, soinInterdit],
+      abilities: [dechargeOcculte, totemDeSoin, chaineDEclairs, soinInterdit],
       cooldowns: {},
       status: [],
       alive: true,
@@ -63,10 +72,13 @@ export function createInitialCharacters(): Character[] {
         "Combattant agile maniant une énergie démoniaque instable. Armes doubles, pactes dangereux.",
       maxHp: C.zlatax.maxHp,
       hp: C.zlatax.maxHp,
+      maxMp: C.zlatax.maxMp,
+      mp: C.zlatax.maxMp,
+      mpRegen: C.zlatax.mpRegen,
       defense: C.zlatax.defense,
       physicalPower: C.zlatax.physicalPower,
       magicPower: C.zlatax.magicPower,
-      abilities: [entailleInfernale, rueeDemoniaque, marqueDuTraque, pacteInstable],
+      abilities: [entailleInfernale, pacteInstable, rueeDemoniaque, marqueDuTraque],
       cooldowns: {},
       status: [],
       alive: true,

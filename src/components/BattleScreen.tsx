@@ -1,8 +1,7 @@
 import type { Ability, Character, GameState } from '../game/types';
-import { CharacterCard } from './CharacterCard';
 import { BossStatusBar } from './BossStatusBar';
 import { BattleArena } from './BattleArena';
-import { AbilityPanel } from './AbilityPanel';
+import { BattleMenu } from './BattleMenu';
 import { CombatLog } from './CombatLog';
 import './BattleScreen.css';
 
@@ -26,12 +25,12 @@ export function BattleScreen({
   const isPickingTarget = state.pendingTarget !== null;
   const targetingAbility = state.pendingTarget?.ability;
 
-  const charTargetable = (c: Character) => {
-    if (!isPickingTarget || !c.alive) return false;
-    return targetingAbility!.target === 'ally';
-  };
   const bossTargetable =
     isPickingTarget && state.boss.alive && targetingAbility!.target === 'enemy';
+
+  // Position du menu : à gauche si le perso actif est à droite, sinon à droite.
+  const menuPosition: 'left' | 'right' =
+    activeCharacter?.id === 'zlatax' ? 'left' : 'right';
 
   return (
     <div className="battle-screen">
@@ -40,7 +39,7 @@ export function BattleScreen({
           <div className="battle-turn">Tour {state.turn}</div>
           <div className="battle-phase">
             {state.phase === 'playerTurn'
-              ? `Action : ${activeCharacter ? activeCharacter.name : '...'}`
+              ? `À ${activeCharacter ? activeCharacter.name : '...'}`
               : '⌛ Tour du Champion'}
           </div>
         </div>
@@ -52,49 +51,61 @@ export function BattleScreen({
 
       <div className="battle-main">
         <div className="battle-left">
+          {/* Barre du boss en haut, cliquable comme cible */}
           <BossStatusBar
             boss={state.boss}
             isTargetable={bossTargetable}
             onSelect={() => onTargetSelect(state.boss.id)}
           />
 
-          <BattleArena state={state} />
+          <div className="arena-wrap">
+            <BattleArena state={state} activeHeroId={activeCharacter?.id ?? null} />
 
-          {isPickingTarget && (
-            <div className="targeting-banner">
-              <span>
-                🎯 Cible pour <strong>{targetingAbility!.name}</strong>&nbsp;:{' '}
-                {targetingAbility!.target === 'enemy'
-                  ? 'clique sur le boss en haut'
-                  : 'clique sur un allié ci-dessous'}
-              </span>
-              <button className="targeting-cancel" onClick={onCancelTarget}>
-                Annuler
-              </button>
-            </div>
-          )}
-
-          <div className="battle-team">
-            {state.characters.map((c, i) => (
-              <CharacterCard
-                key={c.id}
-                character={c}
-                isActive={
-                  state.phase === 'playerTurn' &&
-                  i === state.activeCharacterIndex &&
-                  !isPickingTarget
-                }
-                isTargetable={charTargetable(c)}
-                onSelect={() => onTargetSelect(c.id)}
+            {/* Menu pixel-art FF-style superposé sur l'arène */}
+            {state.phase === 'playerTurn' && !isPickingTarget && (
+              <BattleMenu
+                character={activeCharacter}
+                disabled={false}
+                onAbilityClick={onAbilityClick}
+                position={menuPosition}
               />
-            ))}
-          </div>
+            )}
 
-          <AbilityPanel
-            character={activeCharacter}
-            onAbilityClick={onAbilityClick}
-            disabled={state.phase !== 'playerTurn' || isPickingTarget}
-          />
+            {/* Sélection de cible alliée — boutons flottants */}
+            {isPickingTarget && targetingAbility?.target === 'ally' && (
+              <div className="ally-target-overlay">
+                <div className="ally-target-title">
+                  🎯 {targetingAbility.name} — choisis un allié
+                </div>
+                <div className="ally-target-row">
+                  {state.characters.map((c) => (
+                    <button
+                      key={c.id}
+                      className="ally-target-btn"
+                      disabled={!c.alive}
+                      onClick={() => onTargetSelect(c.id)}
+                    >
+                      <span className="ally-target-name">{c.name}</span>
+                      <span className="ally-target-hp">{c.hp}/{c.maxHp} PV</span>
+                    </button>
+                  ))}
+                </div>
+                <button className="targeting-cancel" onClick={onCancelTarget}>
+                  Annuler
+                </button>
+              </div>
+            )}
+
+            {/* Indicateur cible boss */}
+            {bossTargetable && (
+              <div className="boss-target-hint">
+                🎯 Clique sur le boss en haut pour {targetingAbility?.name}
+                <button className="targeting-cancel" onClick={onCancelTarget}>
+                  Annuler
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <aside className="battle-side">

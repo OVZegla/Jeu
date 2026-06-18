@@ -10,9 +10,28 @@ export const BALANCE = {
     enragePhaseThreshold: 0.4, // sous 40% → enraged
   },
   characters: {
-    datpaloof: { maxHp: 280, defense: 0.35, physicalPower: 1.0, magicPower: 0.8 },
-    baghaar:   { maxHp: 210, defense: 0.15, physicalPower: 0.7, magicPower: 1.2 },
-    zlatax:    { maxHp: 180, defense: 0.05, physicalPower: 1.4, magicPower: 0.6 },
+    datpaloof: { maxHp: 280, maxMp: 100, mpRegen: 18, defense: 0.35, physicalPower: 1.0, magicPower: 0.8 },
+    baghaar:   { maxHp: 210, maxMp: 140, mpRegen: 22, defense: 0.15, physicalPower: 0.7, magicPower: 1.2 },
+    zlatax:    { maxHp: 180, maxMp: 80,  mpRegen: 14, defense: 0.05, physicalPower: 1.4, magicPower: 0.6 },
+  },
+
+  // Coûts MP par compétence (mappés ci-dessous dans abilities.ts)
+  mpCosts: {
+    // Datpaloof
+    jugement: 0,         // attaque de base — gratuite
+    bouclierDivin: 18,
+    soinsRapides: 24,
+    consecration: 32,
+    // Baghaar
+    dechargeOcculte: 0,  // attaque de base
+    totemDeSoin: 28,
+    chaineDEclairs: 30,
+    soinInterdit: 40,
+    // Zlatax
+    entailleInfernale: 0, // attaque de base
+    pacteInstable: 18,
+    rueeDemoniaque: 28,
+    marqueDuTraque: 20,
   },
 
   // Compétences joueurs
