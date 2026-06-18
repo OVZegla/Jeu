@@ -187,14 +187,6 @@ export class BattleScene extends Phaser.Scene {
     const container = this.add.container(x, y, [shadow, sprite]);
     container.setDepth(50); // sous les héros
     const v: BossVisual = { container, sprite, shadow, baseX: x, baseY: y, alive: true };
-    v.bobTween = this.tweens.add({
-      targets: container,
-      y: y - 6,
-      duration: 1600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
     return v;
   }
 
@@ -224,15 +216,7 @@ export class BattleScene extends Phaser.Scene {
       container, sprite, shadow, cursor,
       baseX: x, baseY: y, alive: true, flip,
     };
-    v.bobTween = this.tweens.add({
-      targets: container,
-      y: y - 3,
-      duration: 1200 + Math.random() * 300,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-    // Tween indépendant qui fait pulser le curseur (suit le bob du container)
+    // Le curseur ▼ continue de pulser légèrement pour rester repérable
     this.tweens.add({
       targets: cursor,
       y: -sprite.displayHeight - 22,
