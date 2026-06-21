@@ -56,8 +56,14 @@ export function ExplorationScreen({ onEngage }: Props) {
     };
   }, []);
 
-  // Quand le state mapId change, demande à la scène de switcher
+  // Quand le state mapId change, demande à la scène de switcher.
+  // Skip le tout premier render : la scène charge déjà 'bureau' dans son create().
+  const isFirstMapRender = useRef(true);
   useEffect(() => {
+    if (isFirstMapRender.current) {
+      isFirstMapRender.current = false;
+      return;
+    }
     sceneRef.current?.applyMapSwitch(mapId);
     setPromptLabel(null);
   }, [mapId]);

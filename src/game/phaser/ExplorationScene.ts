@@ -174,7 +174,7 @@ export class ExplorationScene extends Phaser.Scene {
     this.engaged = false;
     this.moveTarget = null;
     this.nearest = null;
-    this.prompt.setVisible(false);
+    if (this.prompt) this.prompt.setVisible(false);
 
     // Nettoie les interactables précédents
     for (const v of this.interactables) {
