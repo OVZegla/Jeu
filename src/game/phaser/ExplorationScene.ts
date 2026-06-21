@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Interactable, MapId } from '../types';
+import type { Interactable, MapId, WalkableRect } from '../types';
 import { getMap } from '../../data/maps';
 
 type Dir = 'front' | 'back' | 'left' | 'right';
@@ -61,10 +61,16 @@ export class ExplorationScene extends Phaser.Scene {
 
   // Input
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasd!: Record<'W' | 'A' | 'S' | 'D' | 'SPACE' | 'ENTER', Phaser.Input.Keyboard.Key>;
+  private wasd!: Record<'W' | 'A' | 'S' | 'D' | 'SPACE' | 'ENTER' | 'DBG', Phaser.Input.Keyboard.Key>;
   private moveTarget: { x: number; y: number } | null = null;
   private engaged = false;
   private switching = false;
+
+  // Collision : walkable rects en COORDONNÉES MONDE (déjà multipliés par worldW/H + offset)
+  private walkableWorld: { x: number; y: number; w: number; h: number }[] = [];
+  private playerScale = 1;
+  private debugGfx: Phaser.GameObjects.Graphics | null = null;
+  private debugMode = false;
 
   constructor(events: ExplorationSceneEvents, initialMapId: MapId = 'bureau') {
     super({ key: 'ExplorationScene' });
@@ -102,7 +108,14 @@ export class ExplorationScene extends Phaser.Scene {
       D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
       SPACE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       ENTER: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
+      DBG: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B), // 'B' = toggle debug walkable
     };
+    this.wasd.DBG.on('down', () => this.toggleDebug());
+
+    // Debug si présent dans l'URL
+    if (typeof window !== 'undefined' && window.location.search.includes('debug')) {
+      this.debugMode = true;
+    }
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.switching || this.engaged) return;
@@ -217,9 +230,24 @@ export class ExplorationScene extends Phaser.Scene {
       this.veil.setDepth(1);
     }
 
-    // Spawn du joueur
+    // Walkable zones → coords monde
+    this.walkableWorld = (config.walkable || []).map((z: WalkableRect) => ({
+      x: this.worldOffsetX + this.worldW * z.x,
+      y: this.worldOffsetY + this.worldH * z.y,
+      w: this.worldW * z.w,
+      h: this.worldH * z.h,
+    }));
+
+    // Scale joueur spécifique à la map
+    this.playerScale = config.playerScale ?? 1;
+    this.player.setScale((PLAYER_TARGET_HEIGHT * this.playerScale) / this.player.height);
+    this.playerShadow.scaleX = this.playerScale;
+    this.playerShadow.scaleY = this.playerScale;
+
+    // Spawn du joueur (au plus près d'une walkable zone si défini)
     this.logicalX = this.worldOffsetX + this.worldW * config.spawn.x;
     this.logicalY = this.worldOffsetY + this.worldH * config.spawn.y;
+    this.snapToWalkable();
 
     // Interactables
     for (const it of config.interactables) {
@@ -228,6 +256,50 @@ export class ExplorationScene extends Phaser.Scene {
       const group = this.spawnInteractable(it, worldX, worldY);
       this.interactables.push({ data: it, worldX, worldY, group });
     }
+
+    // (Re)dessine le debug si actif
+    this.renderDebug();
+  }
+
+  private isWalkable(x: number, y: number): boolean {
+    if (this.walkableWorld.length === 0) return true; // pas de contrainte
+    for (const z of this.walkableWorld) {
+      if (x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h) return true;
+    }
+    return false;
+  }
+
+  // Si le spawn est hors zone, on déplace le joueur sur la zone la plus proche.
+  private snapToWalkable() {
+    if (this.walkableWorld.length === 0) return;
+    if (this.isWalkable(this.logicalX, this.logicalY)) return;
+    let best: { x: number; y: number; d: number } | null = null;
+    for (const z of this.walkableWorld) {
+      const cx = Phaser.Math.Clamp(this.logicalX, z.x, z.x + z.w);
+      const cy = Phaser.Math.Clamp(this.logicalY, z.y, z.y + z.h);
+      const d = Phaser.Math.Distance.Between(this.logicalX, this.logicalY, cx, cy);
+      if (!best || d < best.d) best = { x: cx, y: cy, d };
+    }
+    if (best) { this.logicalX = best.x; this.logicalY = best.y; }
+  }
+
+  private toggleDebug() {
+    this.debugMode = !this.debugMode;
+    this.renderDebug();
+  }
+
+  private renderDebug() {
+    if (this.debugGfx) { this.debugGfx.destroy(); this.debugGfx = null; }
+    if (!this.debugMode) return;
+    const g = this.add.graphics();
+    g.setDepth(99998);
+    g.lineStyle(2, 0x00ff66, 0.9);
+    g.fillStyle(0x00ff66, 0.15);
+    for (const z of this.walkableWorld) {
+      g.fillRect(z.x, z.y, z.w, z.h);
+      g.strokeRect(z.x, z.y, z.w, z.h);
+    }
+    this.debugGfx = g;
   }
 
   private spawnInteractable(it: Interactable, x: number, y: number): Phaser.GameObjects.GameObject[] {
@@ -376,29 +448,48 @@ export class ExplorationScene extends Phaser.Scene {
       }
     }
 
-    const moving = vx !== 0 || vy !== 0;
+    let moving = vx !== 0 || vy !== 0;
 
+    let actuallyMoved = false;
     if (moving) {
       const norm = Math.hypot(vx, vy);
       vx /= norm; vy /= norm;
-      this.logicalX += vx * PLAYER_SPEED * dt;
-      this.logicalY += vy * PLAYER_SPEED * dt;
-      this.walkPhase += dt * WALK_BOUNCE_SPEED;
+      const dx = vx * PLAYER_SPEED * dt;
+      const dy = vy * PLAYER_SPEED * dt;
 
-      const newDir: Dir =
-        Math.abs(vx) > Math.abs(vy)
-          ? (vx > 0 ? 'right' : 'left')
-          : (vy > 0 ? 'front' : 'back');
-      if (newDir !== this.dir) {
-        this.dir = newDir;
-        this.player.setTexture(`ex-datpaloof-${this.dir}`);
-        this.player.setScale(PLAYER_TARGET_HEIGHT / this.player.height);
+      // Mouvement par axe (sliding contre les murs)
+      const tryX = this.logicalX + dx;
+      if (this.isWalkable(tryX, this.logicalY)) {
+        this.logicalX = tryX;
+        actuallyMoved = true;
+      }
+      const tryY = this.logicalY + dy;
+      if (this.isWalkable(this.logicalX, tryY)) {
+        this.logicalY = tryY;
+        actuallyMoved = true;
+      }
+
+      if (actuallyMoved) {
+        this.walkPhase += dt * WALK_BOUNCE_SPEED;
+        const newDir: Dir =
+          Math.abs(vx) > Math.abs(vy)
+            ? (vx > 0 ? 'right' : 'left')
+            : (vy > 0 ? 'front' : 'back');
+        if (newDir !== this.dir) {
+          this.dir = newDir;
+          this.player.setTexture(`ex-datpaloof-${this.dir}`);
+          this.player.setScale((PLAYER_TARGET_HEIGHT * this.playerScale) / this.player.height);
+        }
+      } else {
+        // Bloqué → annule la cible pour ne pas spammer
+        this.moveTarget = null;
+        this.walkPhase = 0;
       }
     } else {
       this.walkPhase = 0;
     }
 
-    // Clamp
+    // Clamp bornes monde de sécurité (toujours en complément des walkable)
     const halfW = this.player.displayWidth / 2;
     const minX = this.worldOffsetX + halfW;
     const maxX = this.worldOffsetX + this.worldW - halfW;
@@ -406,6 +497,10 @@ export class ExplorationScene extends Phaser.Scene {
     const maxY = this.worldOffsetY + this.worldH;
     this.logicalX = Phaser.Math.Clamp(this.logicalX, minX, maxX);
     this.logicalY = Phaser.Math.Clamp(this.logicalY, minY, maxY);
+
+    // moving est "intention de mouvement" — pour le bounce visuel on prend
+    // l'état "a effectivement bougé" pour ne pas sautiller contre un mur.
+    moving = actuallyMoved;
 
     // Rendu sprite + ombre (bounce visuel seulement sur le sprite)
     const bounce = moving ? -Math.abs(Math.sin(this.walkPhase)) * WALK_BOUNCE_AMPLITUDE : 0;
@@ -415,10 +510,12 @@ export class ExplorationScene extends Phaser.Scene {
     this.playerShadow.y = this.logicalY + 2;
     if (moving) {
       const shrink = 1 - Math.abs(bounce) / (WALK_BOUNCE_AMPLITUDE * 3);
-      this.playerShadow.scaleX = shrink;
+      this.playerShadow.scaleX = this.playerScale * shrink;
+      this.playerShadow.scaleY = this.playerScale;
       this.playerShadow.setAlpha(0.45 * shrink);
     } else {
-      this.playerShadow.scaleX = 1;
+      this.playerShadow.scaleX = this.playerScale;
+      this.playerShadow.scaleY = this.playerScale;
       this.playerShadow.setAlpha(0.45);
     }
     this.player.setDepth(this.logicalY);

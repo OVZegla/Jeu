@@ -141,6 +141,16 @@ export type Interactable =
       label: string;         // ex: "▼ Ramees"
     };
 
+// Zone marchable (rectangle normalisé 0..1 sur la map). Le joueur ne peut
+// se trouver que dans l'union des walkable zones (si aucune, pas de
+// contrainte). Permet de bloquer les bâtiments, les zones noires, etc.
+export interface WalkableRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface ExplorationMapConfig {
   id: MapId;
   name: string;
@@ -149,6 +159,8 @@ export interface ExplorationMapConfig {
   spawn: { x: number; y: number }; // 0..1
   interactables: Interactable[];
   ambianceColor?: number;    // teinte du voile sombre (optionnel)
+  walkable?: WalkableRect[]; // si défini, le joueur ne peut sortir de l'union
+  playerScale?: number;      // multiplicateur de la taille du joueur (défaut 1)
 }
 
 export interface PendingTargetSelection {
