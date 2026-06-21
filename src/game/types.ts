@@ -118,6 +118,39 @@ export type GamePhase =
   | 'victory'
   | 'defeat';
 
+// === Exploration (scènes pré-combat) ===
+
+export type MapId = 'bureau' | 'ramees';
+
+export type Interactable =
+  | {
+      type: 'boss';
+      id: string;
+      x: number; // 0..1 (fraction de largeur de map)
+      y: number; // 0..1
+      spriteKey: string;     // clé Phaser (ex: 'ex-boss')
+      label: string;         // texte affiché à proximité
+      engages: true;         // déclenche le combat
+    }
+  | {
+      type: 'teleport';
+      id: string;
+      x: number;
+      y: number;
+      toMapId: MapId;
+      label: string;         // ex: "▼ Ramees"
+    };
+
+export interface ExplorationMapConfig {
+  id: MapId;
+  name: string;
+  imageKey: string;          // clé Phaser de la map (ex: 'ex-map-bureau')
+  imagePath: string;         // chemin relatif (pour preload)
+  spawn: { x: number; y: number }; // 0..1
+  interactables: Interactable[];
+  ambianceColor?: number;    // teinte du voile sombre (optionnel)
+}
+
 export interface PendingTargetSelection {
   characterId: string;
   ability: Ability;

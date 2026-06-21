@@ -1,44 +1,67 @@
-# 🗺️ Scène d'exploration — pré-combat
+# 🗺️ Scène d'exploration — multi-maps
 
-Cette scène se joue avant le combat : Datpaloof se déplace librement sur
-une map isométrique, doit s'approcher du boss et interagir pour déclencher
-la bataille.
+Datpaloof se déplace librement sur des maps. Sur chaque map il y a des
+**interactables** : un boss (déclenche le combat) ou une **summon stone**
+(téléporte vers une autre map).
 
-## 📂 Fichiers attendus
+## 📂 Structure des dossiers
 
-Dépose dans ce dossier :
+```
+exploration/
+├── datpaloof/              ← sprites du perso (partagés entre toutes les maps)
+│   ├── front.png
+│   ├── back.png
+│   ├── left.png
+│   └── right.png
+├── summon_stone.png        ← sprite de la pierre de téléport (partagé)
+├── bureau/                 ← map "Bureau des Archives Infinies"
+│   ├── map.jpg (ou map.png)
+│   └── boss.png
+└── ramees/                 ← map "Ramees"
+    └── map.jpg (ou map.png)
+```
 
-| Fichier                       | Description                                                     |
-|-------------------------------|-----------------------------------------------------------------|
-| `map.png`                     | La map isométrique en background (PNG ou JPG)                   |
-| `boss.png`                    | Sprite du boss debout sur la map (optionnel, sinon reuse celui du combat) |
-| `datpaloof/front.png`         | Datpaloof vu de face (regarde vers le bas / le joueur)          |
-| `datpaloof/back.png`          | Datpaloof vu de dos (regarde vers le haut)                      |
-| `datpaloof/left.png`          | Datpaloof tourné vers la gauche                                 |
-| `datpaloof/right.png`         | Datpaloof tourné vers la droite                                 |
+## 🎨 Conventions
 
-## 🎨 Conseils techniques
+- **Sprites perso/boss/stone** : fond blanc → retiré automatiquement par le script `scripts/process-exploration.py`
+- **Maps** : si tu uploads en `.png` (taille libre, fond peut être blanc), le
+  script convertit en `.jpg` optimisé (1600px max sur le grand côté)
+- **Si la summon stone n'est pas uploadée** → un placeholder procédural
+  (cercle runique + cristal violet flottant) est généré automatiquement.
+- **Si la map de Ramees n'est pas uploadée** → un rectangle violet avec
+  un message s'affiche à la place. La téléportation marche quand même.
 
-- **Map** : 1280×720 ou 1920×1080 recommandé. Format JPG si pas de transparence (plus léger).
-- **Sprites perso** : fond transparent (PNG), entre 100×140 et 200×280 px. Origin = pieds au centre.
-- **Sprite boss** : même règles que les persos. Idéalement un peu plus grand (le boss est imposant).
-- Pour avoir un perso net : `image-rendering: pixelated` est appliqué via Phaser.
+## 🎮 Comportement
 
-## 🎮 Comportement prévu
+- **Bureau** : Datpaloof spawn en bas à gauche
+  - Au centre : le Champion → engage le combat
+  - À droite : summon stone → téléporte à Ramees
+- **Ramees** : Datpaloof spawn en bas au centre
+  - Au centre : summon stone → retourne au Bureau
 
-- Au démarrage du jeu, après l'écran d'intro → on entre dans cette scène
-- Datpaloof apparaît à un coin de la map
-- Le joueur le déplace avec :
-  - **PC** : flèches ↑↓←→ ou WASD
-  - **Mobile** : tap sur la map pour s'y rendre (ou joystick virtuel — à voir)
-- Le sprite change selon la direction du dernier mouvement (front/back/left/right)
-- Quand Datpaloof s'approche du boss et appuie sur **Espace / Entrée** (ou tap sur le boss sur mobile), le combat démarre
-- Tu peux aussi marquer un perimètre autour du boss qui déclenche un prompt "Engager le combat"
+## 🔄 Quand tu uploads
 
-## 🔄 Quand c'est uploadé
+Une fois tes fichiers en place :
+```bash
+python3 scripts/process-exploration.py
+```
+(facultatif si tu uploads déjà au bon format, mais retire le fond blanc
+et redimensionne).
 
-Une fois les fichiers en place, le pipeline `scripts/process-sprites.py`
-n'a PAS à être relancé (les sprites d'exploration ont déjà un fond
-transparent normalement). Je code ensuite la scène Phaser
-(`src/game/phaser/ExplorationScene.ts`) et la phase `'exploration'` dans
-l'état du jeu.
+## 🛠️ Étendre
+
+Pour ajouter une nouvelle map (ex: `temple/`) :
+1. Crée le dossier `exploration/temple/` avec `map.jpg`
+2. Ajoute son entrée dans `src/data/maps.ts` :
+   ```ts
+   export const TEMPLE_MAP: ExplorationMapConfig = {
+     id: 'temple',
+     name: 'Temple Oublié',
+     imageKey: 'ex-map-temple',
+     imagePath: 'assets/exploration/temple/map.jpg',
+     spawn: { x: 0.5, y: 0.85 },
+     interactables: [...]
+   };
+   ```
+3. Ajoute `'temple'` dans le type `MapId` de `src/game/types.ts`
+4. Ajoute des téléports croisés depuis les autres maps vers `temple`

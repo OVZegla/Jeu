@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Traite les assets de la scène d'exploration :
-- Pour les sprites (datpaloof/{front,back,left,right}.png + boss.png) :
-  retire le fond blanc par flood-fill depuis les bords, crop tight,
-  redimensionne, sauve en PNG.
-- Pour la map : convertit en JPG optimisé.
+"""Traite les assets de la scène d'exploration multi-maps :
+- Sprites perso datpaloof/{front,back,left,right}.png : retire fond blanc + resize
+- Boss bureau/boss.png + summon_stone.png : retire fond blanc + resize
+- Maps {bureau,ramees}/map.png : converti en JPG optimisé
 """
 from PIL import Image
 from collections import deque
@@ -33,14 +32,12 @@ def remove_white_bg(img: Image.Image) -> Image.Image:
         for y in (0, h - 1):
             r, g, b, _ = px[x, y]
             if is_bg(r, g, b):
-                bg[y][x] = True
-                q.append((x, y))
+                bg[y][x] = True; q.append((x, y))
     for y in range(h):
         for x in (0, w - 1):
             r, g, b, _ = px[x, y]
             if is_bg(r, g, b) and not bg[y][x]:
-                bg[y][x] = True
-                q.append((x, y))
+                bg[y][x] = True; q.append((x, y))
     while q:
         x, y = q.popleft()
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
@@ -48,14 +45,12 @@ def remove_white_bg(img: Image.Image) -> Image.Image:
             if 0 <= nx < w and 0 <= ny < h and not bg[ny][nx]:
                 r, g, b, _ = px[nx, ny]
                 if is_bg(r, g, b):
-                    bg[ny][nx] = True
-                    q.append((nx, ny))
+                    bg[ny][nx] = True; q.append((nx, ny))
     for y in range(h):
         for x in range(w):
             if bg[y][x]:
                 r, g, b, _ = px[x, y]
                 px[x, y] = (r, g, b, 0)
-    # Feather
     edges = []
     for y in range(h):
         for x in range(w):
@@ -80,6 +75,8 @@ def fit(img: Image.Image, max_dim: int) -> Image.Image:
 
 
 def process_sprite(path: str, max_dim: int):
+    if not os.path.exists(path):
+        return
     img = Image.open(path)
     print(f'{path}: in={img.size} mode={img.mode}')
     img = remove_white_bg(img)
@@ -96,6 +93,8 @@ def process_sprite(path: str, max_dim: int):
 
 
 def process_map(path: str):
+    if not os.path.exists(path):
+        return
     img = Image.open(path).convert('RGB')
     print(f'{path}: in={img.size}')
     img = fit(img, 1600)
@@ -108,19 +107,17 @@ def process_map(path: str):
 
 
 def main():
-    # Personnages : max 280px (la map fait ~1600px, le perso doit être visible mais pas écraser)
+    # Datpaloof — partagé entre toutes les maps
     for d in ('front', 'back', 'left', 'right'):
-        p = os.path.join(EX, 'datpaloof', f'{d}.png')
-        if os.path.exists(p):
-            process_sprite(p, 280)
+        process_sprite(os.path.join(EX, 'datpaloof', f'{d}.png'), 280)
 
-    boss = os.path.join(EX, 'boss.png')
-    if os.path.exists(boss):
-        process_sprite(boss, 380)
+    # Boss + summon stone (partagés / à la racine ou par map)
+    process_sprite(os.path.join(EX, 'bureau', 'boss.png'), 380)
+    process_sprite(os.path.join(EX, 'summon_stone.png'), 220)
 
-    m = os.path.join(EX, 'map.png')
-    if os.path.exists(m):
-        process_map(m)
+    # Maps
+    process_map(os.path.join(EX, 'bureau', 'map.png'))
+    process_map(os.path.join(EX, 'ramees', 'map.png'))
 
 
 if __name__ == '__main__':
