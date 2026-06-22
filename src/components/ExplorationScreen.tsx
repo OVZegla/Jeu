@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { ExplorationScene } from '../game/phaser/ExplorationScene';
-import type { MapId } from '../game/types';
+import type { ExitSide, MapId } from '../game/types';
 import { getMap } from '../data/maps';
 import './ExplorationScreen.css';
 
@@ -14,13 +14,12 @@ export function ExplorationScreen({ onEngage }: Props) {
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<ExplorationScene | null>(null);
   const [mapId, setMapId] = useState<MapId>('bureau');
+  const [entrySide, setEntrySide] = useState<ExitSide | null>(null);
   const [promptLabel, setPromptLabel] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const onEngageRef = useRef(onEngage);
-  const setMapIdRef = useRef(setMapId);
   useEffect(() => { onEngageRef.current = onEngage; }, [onEngage]);
-  useEffect(() => { setMapIdRef.current = setMapId; }, [setMapId]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -29,7 +28,10 @@ export function ExplorationScreen({ onEngage }: Props) {
     const scene = new ExplorationScene({
       onNearInteractable: (label) => setPromptLabel(label),
       onEngage: () => onEngageRef.current(),
-      onTeleport: (toMapId) => setMapIdRef.current(toMapId),
+      onTeleport: (toMapId, fromSide) => {
+        setEntrySide(fromSide ?? null);
+        setMapId(toMapId);
+      },
     });
     sceneRef.current = scene;
 
@@ -63,9 +65,10 @@ export function ExplorationScreen({ onEngage }: Props) {
       isFirstMapRender.current = false;
       return;
     }
-    sceneRef.current?.applyMapSwitch(mapId);
+    sceneRef.current?.applyMapSwitch(mapId, entrySide || undefined);
     setPromptLabel(null);
     setMenuOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapId]);
 
   // Ouvre/ferme le menu pause avec ESC
@@ -84,7 +87,10 @@ export function ExplorationScreen({ onEngage }: Props) {
 
   const handleTeleport = (targetMapId: MapId) => {
     setMenuOpen(false);
-    if (targetMapId !== mapId) setMapId(targetMapId);
+    if (targetMapId !== mapId) {
+      setEntrySide(null); // spawn par défaut, pas par un bord
+      setMapId(targetMapId);
+    }
   };
 
   return (

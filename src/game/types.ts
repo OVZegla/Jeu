@@ -151,38 +151,31 @@ export interface WalkableRect {
   h: number;
 }
 
+// Sortie de map (côté nord/sud/est/ouest) qui mène à une autre map.
+// Le joueur qui sort par le côté X arrive sur la map cible au côté opposé.
+export type ExitSide = 'north' | 'south' | 'east' | 'west';
+
+export interface MapExit {
+  toMapId: MapId;
+  // Position d'entrée sur la map de destination (0..1). Si omis, on calcule
+  // automatiquement le côté opposé centré.
+  entryX?: number;
+  entryY?: number;
+}
+
 export interface ExplorationMapConfig {
   id: MapId;
   name: string;
-  imageKey: string;          // clé Phaser de la map (ex: 'ex-map-bureau')
-  imagePath: string;         // chemin relatif (pour preload)
-  spawn: { x: number; y: number }; // 0..1
+  imageKey: string;
+  imagePath: string;
+  spawn: { x: number; y: number }; // utilisé seulement à la 1ère arrivée (sans direction)
   interactables: Interactable[];
-  ambianceColor?: number;    // teinte du voile sombre (optionnel)
-  walkable?: WalkableRect[]; // si défini, le joueur ne peut sortir de l'union
-  playerScale?: number;      // multiplicateur de la taille du joueur (défaut 1)
-  procedural?: ProceduralConfig; // si défini, la map est générée à la volée
-}
-
-// Configuration de génération procédurale (Lamber etc.)
-export interface ProceduralConfig {
-  type: 'forest';
-  // Grille logique : nombre de cellules en x et y dans le monde iso
-  gridCols: number;
-  gridRows: number;
-  // Dimensions des tiles dans les spritesheets (pour le slicing)
-  groundTileW: number;
-  groundTileH: number;
-  treeTileW: number;
-  treeTileH: number;
-  campTileW: number;
-  campTileH: number;
-  // Dimensions iso (la projection : diamond width × height à l'écran)
-  isoTileW: number;        // largeur effective d'une cellule iso
-  isoTileH: number;        // hauteur effective (typique = isoTileW / 2)
-  treeDensity: number;     // 0..1 — probabilité d'un arbre par cellule
-  campCount: number;
-  seed?: number;
+  ambianceColor?: number;
+  walkable?: WalkableRect[];
+  playerScale?: number;
+  // Sorties de la map vers d'autres maps. Le joueur qui touche le bord
+  // correspondant transite automatiquement.
+  exits?: Partial<Record<ExitSide, MapExit>>;
 }
 
 export interface PendingTargetSelection {

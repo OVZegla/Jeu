@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Interactable, MapId, WalkableRect } from '../types';
+import type { ExitSide, Interactable, MapId, WalkableRect } from '../types';
 import { getMap } from '../../data/maps';
 
 type Dir = 'front' | 'back' | 'left' | 'right';
@@ -8,7 +8,7 @@ export interface ExplorationSceneEvents {
   onReady?: (scene: ExplorationScene) => void;
   onNearInteractable?: (label: string | null) => void;
   onEngage?: () => void;
-  onTeleport?: (toMapId: MapId) => void;
+  onTeleport?: (toMapId: MapId, fromSide?: ExitSide) => void;
 }
 
 const PLAYER_SPEED = 180;
@@ -72,11 +72,10 @@ export class ExplorationScene extends Phaser.Scene {
   private debugGfx: Phaser.GameObjects.Graphics | null = null;
   private debugMode = false;
 
-  // Objets procéduraux (à nettoyer entre les maps)
-  private proceduralGroup: Phaser.GameObjects.GameObject[] = [];
-  // Interactables créés par la génération procédurale (camps), à injecter
-  // dans le tableau interactables avec ceux du config
-  private pendingProceduralInteractables: Interactable[] = [];
+  // Sorties N/S/E/W de la map courante (pour edge transitions)
+  private currentExits: Partial<Record<ExitSide, import('../types').MapExit>> = {};
+  // Côté d'entrée pour la prochaine map (passé via applyMapSwitch)
+  private nextEntrySide: ExitSide | null = null;
 
   constructor(events: ExplorationSceneEvents, initialMapId: MapId = 'bureau') {
     super({ key: 'ExplorationScene' });
@@ -86,9 +85,10 @@ export class ExplorationScene extends Phaser.Scene {
 
   preload() {
     const base = import.meta.env.BASE_URL || '/';
-    // Maps
+    // Maps statiques (1 image par écran)
     this.load.image('ex-map-bureau', `${base}assets/exploration/bureau/map.jpg`);
     this.load.image('ex-map-ramees', `${base}assets/exploration/ramees/map.jpg`);
+    this.load.image('ex-map-lamber', `${base}assets/exploration/lamber/map.jpg`);
 
     // Sprites entités
     this.load.image('ex-boss-bureau', `${base}assets/exploration/bureau/boss.png`);
@@ -97,19 +97,6 @@ export class ExplorationScene extends Phaser.Scene {
     this.load.image('ex-datpaloof-back', `${base}assets/exploration/datpaloof/back.png`);
     this.load.image('ex-datpaloof-left', `${base}assets/exploration/datpaloof/left.png`);
     this.load.image('ex-datpaloof-right', `${base}assets/exploration/datpaloof/right.png`);
-
-    // Tile sheets pour la génération procédurale (Lamber)
-    // Chaque tilesheet a un atlas JSON généré par scripts/build-lamber-atlas.py
-    // qui définit la bounding box exacte de chaque tile (taille irrégulière).
-    this.load.atlas('ex-lamber-ground',
-      `${base}assets/exploration/lamber/tilesets/ground.png`,
-      `${base}assets/exploration/lamber/tilesets/ground.json`);
-    this.load.atlas('ex-lamber-trees',
-      `${base}assets/exploration/lamber/tilesets/trees.png`,
-      `${base}assets/exploration/lamber/tilesets/trees.json`);
-    this.load.atlas('ex-lamber-camps',
-      `${base}assets/exploration/lamber/tilesets/camps.png`,
-      `${base}assets/exploration/lamber/tilesets/camps.json`);
 
     // Tolère silencieusement les assets manquants
     this.load.on('loaderror', (file: { key: string; url: string }) => {
@@ -205,20 +192,14 @@ export class ExplorationScene extends Phaser.Scene {
     if (this.bg) this.bg.destroy();
     if (this.veil) this.veil.destroy();
 
-    // Nettoie les objets procéduraux précédents
-    for (const o of this.proceduralGroup) o.destroy();
-    this.proceduralGroup = [];
-
     const config = getMap(mapId);
+    this.currentExits = config.exits || {};
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // === Cas 1 : map procédurale (forêt) ===
-    if (config.procedural) {
-      this.generateProceduralMap(config, w, h);
-    }
-    // === Cas 2 : map avec image background ===
-    else if (this.textures.exists(config.imageKey)) {
+    // Map statique (1 image par écran). Si l'image n'a pas été uploadée,
+    // un placeholder s'affiche avec le nom de la map et le chemin attendu.
+    if (this.textures.exists(config.imageKey)) {
       this.bg = this.add.image(w / 2, h / 2, config.imageKey);
       const s = Math.min(w / this.bg.width, h / this.bg.height);
       this.bg.setScale(s);
@@ -226,15 +207,13 @@ export class ExplorationScene extends Phaser.Scene {
       this.worldW = this.bg.displayWidth;
       this.worldH = this.bg.displayHeight;
     } else {
-      // Placeholder : rectangle plein avec gradient
       this.worldW = Math.min(w, 1200);
       this.worldH = Math.min(h, 700);
-      this.bg = this.add.image(w / 2, h / 2, '__MISSING__'); // sera invisible
+      this.bg = this.add.image(w / 2, h / 2, '__MISSING__');
       const rect = this.add.rectangle(w / 2, h / 2, this.worldW, this.worldH, 0x1a1428, 1);
       rect.setStrokeStyle(2, 0xaa66ff);
       rect.setDepth(0);
-      // Note "Map manquante" centré
-      const note = this.add.text(w / 2, h / 2, `${config.name}\n(map à uploader dans\npublic/assets/exploration/${config.id}/map.png)`, {
+      const note = this.add.text(w / 2, h / 2, `${config.name}\n(map à uploader dans\npublic/${config.imagePath})`, {
         fontFamily: 'Georgia, serif',
         fontSize: '18px',
         color: '#aab8c8',
@@ -248,15 +227,13 @@ export class ExplorationScene extends Phaser.Scene {
     this.worldOffsetX = (w - this.worldW) / 2;
     this.worldOffsetY = (h - this.worldH) / 2;
 
-    // Voile sombre d'ambiance (skip pour procédural — la forêt a déjà ses tons)
-    if (!config.procedural) {
-      if (config.ambianceColor) {
-        this.veil = this.add.rectangle(w / 2, h / 2, w, h, config.ambianceColor, 0.25);
-        this.veil.setDepth(1);
-      } else {
-        this.veil = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.1);
-        this.veil.setDepth(1);
-      }
+    // Voile sombre d'ambiance
+    if (config.ambianceColor) {
+      this.veil = this.add.rectangle(w / 2, h / 2, w, h, config.ambianceColor, 0.25);
+      this.veil.setDepth(1);
+    } else {
+      this.veil = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.1);
+      this.veil.setDepth(1);
     }
 
     // Walkable zones → coords monde
@@ -273,18 +250,37 @@ export class ExplorationScene extends Phaser.Scene {
     this.playerShadow.scaleX = this.playerScale;
     this.playerShadow.scaleY = this.playerScale;
 
-    // Spawn du joueur (au plus près d'une walkable zone si défini)
-    this.logicalX = this.worldOffsetX + this.worldW * config.spawn.x;
-    this.logicalY = this.worldOffsetY + this.worldH * config.spawn.y;
+    // Spawn : si on arrive via une sortie, on apparaît au côté opposé.
+    // Sinon, spawn par défaut depuis le config.
+    if (this.nextEntrySide) {
+      const margin = 60;
+      switch (this.nextEntrySide) {
+        case 'north': // venant du nord d'une map voisine → on apparaît en haut
+          this.logicalX = this.worldOffsetX + this.worldW * 0.5;
+          this.logicalY = this.worldOffsetY + margin;
+          break;
+        case 'south':
+          this.logicalX = this.worldOffsetX + this.worldW * 0.5;
+          this.logicalY = this.worldOffsetY + this.worldH - margin;
+          break;
+        case 'west':
+          this.logicalX = this.worldOffsetX + margin;
+          this.logicalY = this.worldOffsetY + this.worldH * 0.5;
+          break;
+        case 'east':
+          this.logicalX = this.worldOffsetX + this.worldW - margin;
+          this.logicalY = this.worldOffsetY + this.worldH * 0.5;
+          break;
+      }
+      this.nextEntrySide = null;
+    } else {
+      this.logicalX = this.worldOffsetX + this.worldW * config.spawn.x;
+      this.logicalY = this.worldOffsetY + this.worldH * config.spawn.y;
+    }
     this.snapToWalkable();
 
-    // Interactables : ceux du config + ceux générés par le procédural (camps)
-    const allInteractables: Interactable[] = [
-      ...config.interactables,
-      ...this.pendingProceduralInteractables,
-    ];
-    this.pendingProceduralInteractables = [];
-    for (const it of allInteractables) {
+    // Interactables
+    for (const it of config.interactables) {
       const worldX = this.worldOffsetX + this.worldW * it.x;
       const worldY = this.worldOffsetY + this.worldH * it.y;
       const group = this.spawnInteractable(it, worldX, worldY);
@@ -568,6 +564,9 @@ export class ExplorationScene extends Phaser.Scene {
     }
     // +0.6 → le joueur dessine juste au-dessus des ground tiles à la même Y
     this.player.setDepth(this.logicalY + 0.6);
+
+    // Transitions N/S/E/W (style Dofus) si le joueur touche un bord avec exit
+    this.checkEdgeExits();
     this.playerShadow.setDepth(this.logicalY - 1);
 
     // Détection de l'interactable le plus proche
@@ -621,327 +620,41 @@ export class ExplorationScene extends Phaser.Scene {
   }
 
   // Appelée depuis React après bascule de map (côté state)
-  applyMapSwitch(mapId: MapId) {
+  applyMapSwitch(mapId: MapId, fromSide?: ExitSide) {
+    this.nextEntrySide = fromSide || null;
     this.loadMap(mapId);
     this.cameras.main.fadeIn(280, 0, 0, 0);
   }
 
-  // === Génération procédurale (Forêt de Lamber, vraie projection isométrique) ===
-  private generateProceduralMap(config: import('../types').ExplorationMapConfig, viewW: number, viewH: number) {
-    const proc = config.procedural!;
 
-    // === Setup de la projection isométrique ===
-    // Cellule logique (gx, gy) → écran via :
-    //   sx = (gx - gy) * isoTileW/2
-    //   sy = (gx + gy) * isoTileH/2
-    const isoW = proc.isoTileW;
-    const isoH = proc.isoTileH;
-    const cols = proc.gridCols;
-    const rows = proc.gridRows;
-
-    // Bounding box de la grille en coords écran (avant offset)
-    // x min = -rows * isoW/2 (coin haut, gx=0, gy=rows-1)
-    // x max = cols * isoW/2 (coin bas-droite)
-    // y min = 0 (coin haut, gx=0, gy=0)
-    // y max = (cols + rows) * isoH/2
-    // Le diamond iso s'étend de (0, rows-1) à gauche jusqu'à (cols-1, 0) à droite
-    const bboxW = (cols + rows - 2) * isoW / 2 + isoW;  // + isoW pour compter la 1/2 diamond aux deux bouts
-    const bboxH = (cols + rows - 2) * isoH / 2 + isoH;
-    this.worldW = bboxW;
-    this.worldH = bboxH;
-    // offsetX positionne le point iso(0,0) — il faut que la cellule la plus à
-    // gauche (gx=0, gy=rows-1) soit au bord gauche du viewport visible.
-    this.worldOffsetX = (viewW - bboxW) / 2 + (rows - 1) * isoW / 2 + isoW / 2;
-    this.worldOffsetY = (viewH - bboxH) / 2 + isoH / 2;
-
-    // Fonction de conversion grille → coords écran
-    const iso = (gx: number, gy: number) => ({
-      x: this.worldOffsetX + (gx - gy) * isoW / 2,
-      y: this.worldOffsetY + (gx + gy) * isoH / 2,
-    });
-
-    // Seed (déterministe si fourni, sinon random)
-    const seed = proc.seed ?? Math.floor(Math.random() * 1e9);
-    const rng = mulberry32(seed);
-
-    // === Atlas prep ===
-    const hasGround = this.textures.exists('ex-lamber-ground')
-      && this.textures.get('ex-lamber-ground').frameTotal > 1;
-    const hasTrees = this.textures.exists('ex-lamber-trees')
-      && this.textures.get('ex-lamber-trees').frameTotal > 1;
-    const hasCamps = this.textures.exists('ex-lamber-camps')
-      && this.textures.get('ex-lamber-camps').frameTotal > 1;
-    const groundFrames = hasGround ? this.textures.get('ex-lamber-ground').getFrameNames() : [];
-    const treeFrames = hasTrees ? this.textures.get('ex-lamber-trees').getFrameNames() : [];
-    const campFrames = hasCamps ? this.textures.get('ex-lamber-camps').getFrameNames() : [];
-
-    // Catégorisation des frames de sol par row (8 rows × 8 cols, ordonnées top→bot par l'atlas)
-    const G = {
-      grass:    groundFrames.slice(0, 8),       // row 1 : herbe jaune claire
-      grass2:   groundFrames.slice(8, 16),      // row 2 : terre sèche
-      dirtMix:  groundFrames.slice(16, 24),     // row 3 : terre+herbe mêlées
-      dirtDark: groundFrames.slice(24, 32),     // row 4 : terre sombre (chemins forestiers)
-      cobble:   groundFrames.slice(32, 40),     // row 5 : pavés
-      cobbleM:  groundFrames.slice(40, 48),     // row 6 : pavés-herbe
-    };
-
-    // Catégorisation des frames de camp
-    const C = {
-      tents:     campFrames.slice(0, 4),
-      fires:     campFrames.slice(4, 8),
-      palissade: campFrames.slice(8, 14),
-      banners:   campFrames.slice(14, 18),
-      crates:    campFrames.slice(18, 24),
-      carts:     campFrames.slice(24, 28),
-      weapons:   campFrames.slice(28, 33),
-      altars:    campFrames.slice(33, 39),
-      candles:   campFrames.slice(39, 43),
-      skulls:    campFrames.slice(43, 51),
-    };
-    const pickFrame = (arr: string[]) => arr.length ? arr[Math.floor(rng() * arr.length)] : null;
-
-    // === Plan de la map : type de cellule ===
-    type CellKind = 'grass' | 'path' | 'camp' | 'spawn';
-    const plan: CellKind[][] = [];
-    for (let gy = 0; gy < rows; gy++) {
-      const row: CellKind[] = [];
-      for (let gx = 0; gx < cols; gx++) row.push('grass');
-      plan.push(row);
-    }
-
-    // Zone de spawn (haut centre)
-    const spawnGx = Math.floor(cols * 0.5);
-    const spawnGy = Math.floor(rows * 0.08);
-    for (let dy = -1; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-      const gx = spawnGx + dx, gy = spawnGy + dy;
-      if (gx >= 0 && gx < cols && gy >= 0 && gy < rows) plan[gy][gx] = 'spawn';
-    }
-
-    // === Camps (placement) ===
-    const campTypes: Array<{ kind: 'bandits' | 'gobelins' | 'cultistes'; label: string; icon: string }> = [
-      { kind: 'bandits',   label: '⚔️ Camp de bandits',   icon: '🏕️' },
-      { kind: 'gobelins',  label: '⚔️ Camp de gobelins',  icon: '🛖' },
-      { kind: 'cultistes', label: '⚔️ Cultistes',          icon: '🕯️' },
-    ];
-    type Recipe = Array<{ dx: number; dy: number; cat: keyof typeof C }>;
-    const CAMP_RECIPES: Record<'bandits'|'gobelins'|'cultistes', Recipe> = {
-      bandits: [
-        { dx: 0, dy: 0, cat: 'tents' },
-        { dx: 1, dy: 0, cat: 'fires' },
-        { dx: -1, dy: 0, cat: 'palissade' },
-        { dx: 0, dy: -1, cat: 'palissade' },
-        { dx: -1, dy: 1, cat: 'crates' },
-        { dx: 1, dy: 1, cat: 'carts' },
-        { dx: 1, dy: -1, cat: 'banners' },
-        { dx: -2, dy: 0, cat: 'palissade' },
-      ],
-      gobelins: [
-        { dx: 0, dy: 0, cat: 'tents' },
-        { dx: 1, dy: 0, cat: 'fires' },
-        { dx: -1, dy: 0, cat: 'tents' },
-        { dx: 0, dy: 1, cat: 'skulls' },
-        { dx: 1, dy: -1, cat: 'banners' },
-        { dx: -1, dy: 1, cat: 'palissade' },
-        { dx: 0, dy: -1, cat: 'weapons' },
-      ],
-      cultistes: [
-        { dx: 0, dy: 0, cat: 'altars' },
-        { dx: 1, dy: 0, cat: 'candles' },
-        { dx: -1, dy: 0, cat: 'candles' },
-        { dx: 0, dy: -1, cat: 'banners' },
-        { dx: 0, dy: 1, cat: 'skulls' },
-        { dx: 1, dy: 1, cat: 'altars' },
-        { dx: -1, dy: -1, cat: 'banners' },
-        { dx: 1, dy: -1, cat: 'skulls' },
-      ],
-    };
-
-    const placedCamps: Array<{ gx: number; gy: number; type: typeof campTypes[number] }> = [];
-    const minCampCellDist = 8;
-    let tries = 0;
-    while (placedCamps.length < proc.campCount && tries < 600) {
-      tries++;
-      const gx = 4 + Math.floor(rng() * (cols - 8));
-      const gy = 6 + Math.floor(rng() * (rows - 10));
-      if (plan[gy][gx] !== 'grass') continue;
-      let ok = true;
-      for (const c of placedCamps) {
-        if (Math.max(Math.abs(c.gx - gx), Math.abs(c.gy - gy)) < minCampCellDist) { ok = false; break; }
-      }
-      if (!ok) continue;
-      placedCamps.push({ gx, gy, type: campTypes[placedCamps.length % campTypes.length] });
-      // Marque la zone du camp (3x3 autour)
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const cx = gx + dx, cy = gy + dy;
-        if (cx >= 0 && cx < cols && cy >= 0 && cy < rows) plan[cy][cx] = 'camp';
-      }
-    }
-
-    // === Routes connectées : chaque camp est relié au spawn via L-shape Manhattan ===
-    for (const camp of placedCamps) {
-      const verticalFirst = rng() < 0.5;
-      if (verticalFirst) {
-        for (let y = Math.min(spawnGy, camp.gy); y <= Math.max(spawnGy, camp.gy); y++) {
-          if (plan[y][spawnGx] === 'grass') plan[y][spawnGx] = 'path';
-        }
-        for (let x = Math.min(spawnGx, camp.gx); x <= Math.max(spawnGx, camp.gx); x++) {
-          if (plan[camp.gy][x] === 'grass') plan[camp.gy][x] = 'path';
-        }
-      } else {
-        for (let x = Math.min(spawnGx, camp.gx); x <= Math.max(spawnGx, camp.gx); x++) {
-          if (plan[spawnGy][x] === 'grass') plan[spawnGy][x] = 'path';
-        }
-        for (let y = Math.min(spawnGy, camp.gy); y <= Math.max(spawnGy, camp.gy); y++) {
-          if (plan[y][camp.gx] === 'grass') plan[y][camp.gx] = 'path';
-        }
-      }
-    }
-
-    // === Rendu du sol ===
-    const fallbackGrass = [0x3a5a2a, 0x426a30, 0x4a6b2e, 0x5a7a36];
-    const fallbackPath = [0x8a6a3a, 0x9a7a48, 0xa88858];
-
-    for (let gy = 0; gy < rows; gy++) {
-      for (let gx = 0; gx < cols; gx++) {
-        const kind = plan[gy][gx];
-        const { x, y } = iso(gx, gy);
-
-        if (hasGround && groundFrames.length > 0) {
-          let pool: string[];
-          if (kind === 'path' || kind === 'camp' || kind === 'spawn') {
-            pool = [...G.dirtMix, ...G.dirtDark].filter(Boolean);
-            if (pool.length === 0) pool = groundFrames;
-          } else {
-            pool = [...G.grass, ...G.grass2].filter(Boolean);
-            if (pool.length === 0) pool = groundFrames;
-          }
-          const frameName = pool[Math.floor(rng() * pool.length)];
-          const sprite = this.add.sprite(x, y, 'ex-lamber-ground', frameName);
-          sprite.setOrigin(0.5, 0.5);
-          sprite.setScale(isoW / proc.groundTileW);
-          sprite.setDepth(y);
-          this.proceduralGroup.push(sprite);
-        } else {
-          const palette = (kind === 'path' || kind === 'camp') ? fallbackPath : fallbackGrass;
-          const c = palette[Math.floor(rng() * palette.length)];
-          const diamond = this.add.polygon(x, y, [0, -isoH/2, isoW/2, 0, 0, isoH/2, -isoW/2, 0], c, 1);
-          diamond.setStrokeStyle(1, 0x1a2a14, 0.3);
-          diamond.setDepth(y);
-          this.proceduralGroup.push(diamond);
-        }
-      }
-    }
-
-    // === Arbres dispersés (uniquement sur grass) ===
-    const treeFallbackPalette = [
-      { trunk: 0x3a2410, canopy: 0x2e5828 },
-      { trunk: 0x4a3018, canopy: 0x3a6a32 },
-      { trunk: 0x2a1810, canopy: 0x255424 },
-    ];
-    const isBorder = (gx: number, gy: number) =>
-      gx < 2 || gy < 2 || gx >= cols - 2 || gy >= rows - 2;
-
-    for (let gy = 0; gy < rows; gy++) {
-      for (let gx = 0; gx < cols; gx++) {
-        if (plan[gy][gx] !== 'grass') continue;
-        const inBorder = isBorder(gx, gy);
-        const dens = inBorder ? 0.9 : proc.treeDensity;
-        if (rng() > dens) continue;
-        const { x, y } = iso(gx, gy);
-        const jx = (rng() - 0.5) * isoW * 0.35;
-        const jy = (rng() - 0.5) * isoH * 0.35;
-        if (hasTrees && treeFrames.length > 0) {
-          const frameName = treeFrames[Math.floor(rng() * treeFrames.length)];
-          const tr = this.add.sprite(x + jx, y + jy, 'ex-lamber-trees', frameName);
-          tr.setOrigin(0.5, 0.88);
-          const frameW = tr.width || proc.treeTileW;
-          const baseScale = (isoW * 1.0) / Math.max(80, frameW);
-          const variation = 0.85 + rng() * 0.3;
-          tr.setScale(baseScale * variation);
-          tr.setDepth(y + jy + 0.5);
-          this.proceduralGroup.push(tr);
-        } else {
-          const pal = treeFallbackPalette[Math.floor(rng() * treeFallbackPalette.length)];
-          const size = 14 + rng() * 8;
-          const canopy = this.add.circle(x + jx, y + jy - size * 0.4, size, pal.canopy);
-          canopy.setStrokeStyle(2, 0x0a1a08, 0.6);
-          canopy.setDepth(y + jy + 0.5);
-          const trunk = this.add.rectangle(x + jx, y + jy + 4, 5, 10, pal.trunk);
-          trunk.setDepth(y + jy + 0.4);
-          this.proceduralGroup.push(canopy);
-          this.proceduralGroup.push(trunk);
-        }
-      }
-    }
-
-    // === Camps composites : chaque camp = plusieurs tiles selon la recette ===
-    for (let i = 0; i < placedCamps.length; i++) {
-      const camp = placedCamps[i];
-      const center = iso(camp.gx, camp.gy);
-      const recipe = CAMP_RECIPES[camp.type.kind];
-
-      for (const piece of recipe) {
-        const pos = iso(camp.gx + piece.dx, camp.gy + piece.dy);
-        const catFrames = C[piece.cat];
-        if (hasCamps && catFrames && catFrames.length > 0) {
-          const frameName = pickFrame(catFrames)!;
-          const sprite = this.add.sprite(pos.x, pos.y, 'ex-lamber-camps', frameName);
-          sprite.setOrigin(0.5, 0.85);
-          const frameW = sprite.width || proc.campTileW;
-          sprite.setScale((isoW * 1.1) / Math.max(80, frameW));
-          sprite.setDepth(pos.y + 0.7);
-          this.proceduralGroup.push(sprite);
-        } else {
-          // Fallback : tente colorée par catégorie
-          const palette: Record<string, number> = {
-            tents: 0xa04020, fires: 0xff8030, palissade: 0x6a4a2a, banners: 0x802020,
-            crates: 0x8a6a3a, carts: 0x4a3018, weapons: 0x404040,
-            altars: 0x5a2020, candles: 0xffd060, skulls: 0xe0e0c8,
-          };
-          const c = palette[piece.cat] || 0x804040;
-          const tent = this.add.triangle(pos.x, pos.y, -22, 14, 22, 14, 0, -22, c, 0.95);
-          tent.setStrokeStyle(2, 0x1a0e08);
-          tent.setDepth(pos.y + 0.7);
-          this.proceduralGroup.push(tent);
-        }
-      }
-
-      // Étiquette flottante au-dessus du camp
-      const tag = this.add.text(center.x, center.y - isoH * 2.2, `${camp.type.icon} ${camp.type.kind}`, {
-        fontFamily: 'Georgia, serif',
-        fontSize: '14px',
-        color: '#ffe080',
-        stroke: '#000',
-        strokeThickness: 4,
-        fontStyle: 'bold',
-      });
-      tag.setOrigin(0.5);
-      tag.setDepth(99998);
-      this.proceduralGroup.push(tag);
-
-      // Interactable de combat au centre du camp
-      this.pendingProceduralInteractables.push({
-        type: 'boss',
-        id: `camp-${i}-${camp.type.kind}`,
-        x: (center.x - this.worldOffsetX) / this.worldW,
-        y: (center.y - this.worldOffsetY) / this.worldH,
-        spriteKey: '__placeholder__',
-        label: camp.type.label,
-        engages: true,
-      });
-    }
+  // Vérifie si le joueur sort par un bord (avec exit défini) et lance la transition.
+  // Appelée chaque frame depuis update().
+  private checkEdgeExits() {
+    if (this.switching || this.engaged) return;
+    const e = this.currentExits;
+    if (!e) return;
+    const margin = 8;
+    let side: ExitSide | null = null;
+    if (e.west && this.logicalX <= this.worldOffsetX + margin) side = 'west';
+    else if (e.east && this.logicalX >= this.worldOffsetX + this.worldW - margin) side = 'east';
+    else if (e.north && this.logicalY <= this.worldOffsetY + margin) side = 'north';
+    else if (e.south && this.logicalY >= this.worldOffsetY + this.worldH - margin) side = 'south';
+    if (!side) return;
+    const exit = e[side]!;
+    this.triggerExit(side, exit.toMapId);
   }
 
-}
-
-// PRNG seedable simple (Mulberry32)
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  private triggerExit(_fromSide: ExitSide, toMapId: MapId) {
+    this.switching = true;
+    this.cameras.main.fadeOut(260, 0, 0, 0);
+    // On bascule via React (qui rappelle applyMapSwitch avec le côté d'entrée
+    // pour positionner correctement le joueur sur la nouvelle map).
+    // Le côté d'entrée sur la map cible est l'OPPOSÉ du côté de sortie.
+    const opposite: Record<ExitSide, ExitSide> = {
+      north: 'south', south: 'north', east: 'west', west: 'east',
+    };
+    this.time.delayedCall(280, () => {
+      this.events_.onTeleport?.(toMapId, opposite[_fromSide]);
+    });
+  }
 }
