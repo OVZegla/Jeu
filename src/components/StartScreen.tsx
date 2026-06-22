@@ -24,8 +24,6 @@ export function StartScreen({ onStart }: Props) {
       className="start-screen"
       onClick={onStart}
       style={{ backgroundImage: `url('${TITLE_BG_URL}')` }}
-    >
-      <div className="start-press-hint">▶ Appuie sur une touche ou clique</div>
-    </div>
+    />
   );
 }

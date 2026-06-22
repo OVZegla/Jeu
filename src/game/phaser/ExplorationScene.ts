@@ -79,6 +79,8 @@ export class ExplorationScene extends Phaser.Scene {
   private nextEntrySide: ExitSide | null = null;
   // Particules d'indicateurs aux exits (nettoyées entre les maps)
   private exitParticles: Phaser.GameObjects.GameObject[] = [];
+  // Timestamp jusqu'auquel les edge exits sont désactivés (anti ping-pong au spawn)
+  private exitsLockedUntil = 0;
 
   constructor(events: ExplorationSceneEvents, initialMapId: MapId = 'bureau') {
     super({ key: 'ExplorationScene' });
@@ -293,14 +295,32 @@ export class ExplorationScene extends Phaser.Scene {
       this.interactables.push({ data: it, worldX, worldY, group });
     }
 
-    // Caméra : bornes = monde, suit le joueur avec lerp doux
+    // Caméra : bornes = monde. Si le monde est plus petit que le viewport
+    // on stop le follow et on centre — sinon le bg apparaît collé à gauche.
     this.cameras.main.setBounds(
       this.worldOffsetX - 80,
       this.worldOffsetY - 80,
       this.worldW + 160,
       this.worldH + 160,
     );
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    const xFollows = this.worldW > w;
+    const yFollows = this.worldH > h;
+    if (xFollows || yFollows) {
+      this.cameras.main.startFollow(this.player, true, xFollows ? 0.1 : 0, yFollows ? 0.1 : 0);
+      if (!xFollows) {
+        // Centre X fixé sur le centre du monde
+        this.cameras.main.scrollX = (this.worldOffsetX + this.worldW / 2) - w / 2;
+      }
+      if (!yFollows) {
+        this.cameras.main.scrollY = (this.worldOffsetY + this.worldH / 2) - h / 2;
+      }
+    } else {
+      this.cameras.main.stopFollow();
+      this.cameras.main.centerOn(
+        this.worldOffsetX + this.worldW / 2,
+        this.worldOffsetY + this.worldH / 2,
+      );
+    }
 
     // Particules brillantes aux exits (indique où sortir de la map)
     this.spawnExitIndicators();
@@ -647,6 +667,9 @@ export class ExplorationScene extends Phaser.Scene {
   applyMapSwitch(mapId: MapId, fromSide?: ExitSide) {
     this.nextEntrySide = fromSide || null;
     this.loadMap(mapId);
+    // Désactive les edge exits pendant 600ms après spawn pour éviter
+    // qu'on retraverse instantanément si on spawn près d'un bord.
+    this.exitsLockedUntil = this.time.now + 600;
     this.cameras.main.fadeIn(280, 0, 0, 0);
   }
 
@@ -655,14 +678,20 @@ export class ExplorationScene extends Phaser.Scene {
   // Appelée chaque frame depuis update().
   private checkEdgeExits() {
     if (this.switching || this.engaged) return;
+    if (this.time.now < this.exitsLockedUntil) return; // grace period au spawn
     const e = this.currentExits;
     if (!e) return;
-    const margin = 8;
+    // Marge doit être > halfWidth du joueur, sinon la clampe empêche
+    // logicalX d'atteindre offsetX + margin. On prend une marge généreuse.
+    const halfW = this.player.displayWidth / 2;
+    const halfH = this.player.displayHeight / 2;
+    const marginX = halfW + 10;
+    const marginY = halfH + 10;
     let side: ExitSide | null = null;
-    if (e.west && this.logicalX <= this.worldOffsetX + margin) side = 'west';
-    else if (e.east && this.logicalX >= this.worldOffsetX + this.worldW - margin) side = 'east';
-    else if (e.north && this.logicalY <= this.worldOffsetY + margin) side = 'north';
-    else if (e.south && this.logicalY >= this.worldOffsetY + this.worldH - margin) side = 'south';
+    if (e.west && this.logicalX <= this.worldOffsetX + marginX) side = 'west';
+    else if (e.east && this.logicalX >= this.worldOffsetX + this.worldW - marginX) side = 'east';
+    else if (e.north && this.logicalY <= this.worldOffsetY + marginY) side = 'north';
+    else if (e.south && this.logicalY >= this.worldOffsetY + this.worldH - marginY) side = 'south';
     if (!side) return;
     const exit = e[side]!;
     this.triggerExit(side, exit.toMapId);

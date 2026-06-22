@@ -3,8 +3,12 @@
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  /* L'image du title screen prend tout l'écran. Si pas uploadée → fallback noir. */
-  background: #050608 center/cover no-repeat;
+  /* L'image du title screen entière visible (contain), pas croppée.
+   * Si l'image a un ratio différent du viewport, fond noir aux marges. */
+  background-color: #050608;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
   cursor: pointer;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
