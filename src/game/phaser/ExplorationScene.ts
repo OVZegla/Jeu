@@ -291,6 +291,15 @@ export class ExplorationScene extends Phaser.Scene {
       this.interactables.push({ data: it, worldX, worldY, group });
     }
 
+    // Caméra : bornes = monde, suit le joueur avec lerp doux
+    this.cameras.main.setBounds(
+      this.worldOffsetX - 80,
+      this.worldOffsetY - 80,
+      this.worldW + 160,
+      this.worldH + 160,
+    );
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+
     // (Re)dessine le debug si actif
     this.renderDebug();
   }
@@ -557,7 +566,8 @@ export class ExplorationScene extends Phaser.Scene {
       this.playerShadow.scaleY = this.playerScale;
       this.playerShadow.setAlpha(0.45);
     }
-    this.player.setDepth(this.logicalY);
+    // +0.6 → le joueur dessine juste au-dessus des ground tiles à la même Y
+    this.player.setDepth(this.logicalY + 0.6);
     this.playerShadow.setDepth(this.logicalY - 1);
 
     // Détection de l'interactable le plus proche
@@ -654,87 +664,196 @@ export class ExplorationScene extends Phaser.Scene {
     const seed = proc.seed ?? Math.floor(Math.random() * 1e9);
     const rng = mulberry32(seed);
 
-    // === Sol (atlas iso depuis ground.png + ground.json) ===
-    const hasGroundTiles = this.textures.exists('ex-lamber-ground')
+    // === Atlas prep ===
+    const hasGround = this.textures.exists('ex-lamber-ground')
       && this.textures.get('ex-lamber-ground').frameTotal > 1;
-    const groundFrames = hasGroundTiles
-      ? this.textures.get('ex-lamber-ground').getFrameNames()
-      : [];
-    const fallbackGround = [0x3a5a2a, 0x426a30, 0x4a6b2e, 0x5a7a36, 0x3e5826];
+    const hasTrees = this.textures.exists('ex-lamber-trees')
+      && this.textures.get('ex-lamber-trees').frameTotal > 1;
+    const hasCamps = this.textures.exists('ex-lamber-camps')
+      && this.textures.get('ex-lamber-camps').frameTotal > 1;
+    const groundFrames = hasGround ? this.textures.get('ex-lamber-ground').getFrameNames() : [];
+    const treeFrames = hasTrees ? this.textures.get('ex-lamber-trees').getFrameNames() : [];
+    const campFrames = hasCamps ? this.textures.get('ex-lamber-camps').getFrameNames() : [];
+
+    // Catégorisation des frames de sol par row (8 rows × 8 cols, ordonnées top→bot par l'atlas)
+    const G = {
+      grass:    groundFrames.slice(0, 8),       // row 1 : herbe jaune claire
+      grass2:   groundFrames.slice(8, 16),      // row 2 : terre sèche
+      dirtMix:  groundFrames.slice(16, 24),     // row 3 : terre+herbe mêlées
+      dirtDark: groundFrames.slice(24, 32),     // row 4 : terre sombre (chemins forestiers)
+      cobble:   groundFrames.slice(32, 40),     // row 5 : pavés
+      cobbleM:  groundFrames.slice(40, 48),     // row 6 : pavés-herbe
+    };
+
+    // Catégorisation des frames de camp
+    const C = {
+      tents:     campFrames.slice(0, 4),
+      fires:     campFrames.slice(4, 8),
+      palissade: campFrames.slice(8, 14),
+      banners:   campFrames.slice(14, 18),
+      crates:    campFrames.slice(18, 24),
+      carts:     campFrames.slice(24, 28),
+      weapons:   campFrames.slice(28, 33),
+      altars:    campFrames.slice(33, 39),
+      candles:   campFrames.slice(39, 43),
+      skulls:    campFrames.slice(43, 51),
+    };
+    const pickFrame = (arr: string[]) => arr.length ? arr[Math.floor(rng() * arr.length)] : null;
+
+    // === Plan de la map : type de cellule ===
+    type CellKind = 'grass' | 'path' | 'camp' | 'spawn';
+    const plan: CellKind[][] = [];
+    for (let gy = 0; gy < rows; gy++) {
+      const row: CellKind[] = [];
+      for (let gx = 0; gx < cols; gx++) row.push('grass');
+      plan.push(row);
+    }
+
+    // Zone de spawn (haut centre)
+    const spawnGx = Math.floor(cols * 0.5);
+    const spawnGy = Math.floor(rows * 0.08);
+    for (let dy = -1; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const gx = spawnGx + dx, gy = spawnGy + dy;
+      if (gx >= 0 && gx < cols && gy >= 0 && gy < rows) plan[gy][gx] = 'spawn';
+    }
+
+    // === Camps (placement) ===
+    const campTypes: Array<{ kind: 'bandits' | 'gobelins' | 'cultistes'; label: string; icon: string }> = [
+      { kind: 'bandits',   label: '⚔️ Camp de bandits',   icon: '🏕️' },
+      { kind: 'gobelins',  label: '⚔️ Camp de gobelins',  icon: '🛖' },
+      { kind: 'cultistes', label: '⚔️ Cultistes',          icon: '🕯️' },
+    ];
+    type Recipe = Array<{ dx: number; dy: number; cat: keyof typeof C }>;
+    const CAMP_RECIPES: Record<'bandits'|'gobelins'|'cultistes', Recipe> = {
+      bandits: [
+        { dx: 0, dy: 0, cat: 'tents' },
+        { dx: 1, dy: 0, cat: 'fires' },
+        { dx: -1, dy: 0, cat: 'palissade' },
+        { dx: 0, dy: -1, cat: 'palissade' },
+        { dx: -1, dy: 1, cat: 'crates' },
+        { dx: 1, dy: 1, cat: 'carts' },
+        { dx: 1, dy: -1, cat: 'banners' },
+        { dx: -2, dy: 0, cat: 'palissade' },
+      ],
+      gobelins: [
+        { dx: 0, dy: 0, cat: 'tents' },
+        { dx: 1, dy: 0, cat: 'fires' },
+        { dx: -1, dy: 0, cat: 'tents' },
+        { dx: 0, dy: 1, cat: 'skulls' },
+        { dx: 1, dy: -1, cat: 'banners' },
+        { dx: -1, dy: 1, cat: 'palissade' },
+        { dx: 0, dy: -1, cat: 'weapons' },
+      ],
+      cultistes: [
+        { dx: 0, dy: 0, cat: 'altars' },
+        { dx: 1, dy: 0, cat: 'candles' },
+        { dx: -1, dy: 0, cat: 'candles' },
+        { dx: 0, dy: -1, cat: 'banners' },
+        { dx: 0, dy: 1, cat: 'skulls' },
+        { dx: 1, dy: 1, cat: 'altars' },
+        { dx: -1, dy: -1, cat: 'banners' },
+        { dx: 1, dy: -1, cat: 'skulls' },
+      ],
+    };
+
+    const placedCamps: Array<{ gx: number; gy: number; type: typeof campTypes[number] }> = [];
+    const minCampCellDist = 8;
+    let tries = 0;
+    while (placedCamps.length < proc.campCount && tries < 600) {
+      tries++;
+      const gx = 4 + Math.floor(rng() * (cols - 8));
+      const gy = 6 + Math.floor(rng() * (rows - 10));
+      if (plan[gy][gx] !== 'grass') continue;
+      let ok = true;
+      for (const c of placedCamps) {
+        if (Math.max(Math.abs(c.gx - gx), Math.abs(c.gy - gy)) < minCampCellDist) { ok = false; break; }
+      }
+      if (!ok) continue;
+      placedCamps.push({ gx, gy, type: campTypes[placedCamps.length % campTypes.length] });
+      // Marque la zone du camp (3x3 autour)
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const cx = gx + dx, cy = gy + dy;
+        if (cx >= 0 && cx < cols && cy >= 0 && cy < rows) plan[cy][cx] = 'camp';
+      }
+    }
+
+    // === Routes connectées : chaque camp est relié au spawn via L-shape Manhattan ===
+    for (const camp of placedCamps) {
+      const verticalFirst = rng() < 0.5;
+      if (verticalFirst) {
+        for (let y = Math.min(spawnGy, camp.gy); y <= Math.max(spawnGy, camp.gy); y++) {
+          if (plan[y][spawnGx] === 'grass') plan[y][spawnGx] = 'path';
+        }
+        for (let x = Math.min(spawnGx, camp.gx); x <= Math.max(spawnGx, camp.gx); x++) {
+          if (plan[camp.gy][x] === 'grass') plan[camp.gy][x] = 'path';
+        }
+      } else {
+        for (let x = Math.min(spawnGx, camp.gx); x <= Math.max(spawnGx, camp.gx); x++) {
+          if (plan[spawnGy][x] === 'grass') plan[spawnGy][x] = 'path';
+        }
+        for (let y = Math.min(spawnGy, camp.gy); y <= Math.max(spawnGy, camp.gy); y++) {
+          if (plan[y][camp.gx] === 'grass') plan[y][camp.gx] = 'path';
+        }
+      }
+    }
+
+    // === Rendu du sol ===
+    const fallbackGrass = [0x3a5a2a, 0x426a30, 0x4a6b2e, 0x5a7a36];
+    const fallbackPath = [0x8a6a3a, 0x9a7a48, 0xa88858];
 
     for (let gy = 0; gy < rows; gy++) {
       for (let gx = 0; gx < cols; gx++) {
+        const kind = plan[gy][gx];
         const { x, y } = iso(gx, gy);
-        if (hasGroundTiles && groundFrames.length > 0) {
-          const total = groundFrames.length;
-          const distFromCenter = Math.max(
-            Math.abs(gx - cols / 2) / (cols / 2),
-            Math.abs(gy - rows / 2) / (rows / 2),
-          );
-          const skewIdx = Math.min(total - 1, Math.floor(rng() * total * 0.7 + distFromCenter * total * 0.3));
-          const frameName = groundFrames[skewIdx];
+
+        if (hasGround && groundFrames.length > 0) {
+          let pool: string[];
+          if (kind === 'path' || kind === 'camp' || kind === 'spawn') {
+            pool = [...G.dirtMix, ...G.dirtDark].filter(Boolean);
+            if (pool.length === 0) pool = groundFrames;
+          } else {
+            pool = [...G.grass, ...G.grass2].filter(Boolean);
+            if (pool.length === 0) pool = groundFrames;
+          }
+          const frameName = pool[Math.floor(rng() * pool.length)];
           const sprite = this.add.sprite(x, y, 'ex-lamber-ground', frameName);
           sprite.setOrigin(0.5, 0.5);
-          // Scale pour que la diamond (largeur de la frame) matche isoW
           sprite.setScale(isoW / proc.groundTileW);
           sprite.setDepth(y);
           this.proceduralGroup.push(sprite);
         } else {
-          // Fallback : losange coloré
-          const c = fallbackGround[Math.floor(rng() * fallbackGround.length)];
-          const diamond = this.add.polygon(
-            x, y,
-            [0, -isoH / 2, isoW / 2, 0, 0, isoH / 2, -isoW / 2, 0],
-            c, 1
-          );
-          diamond.setStrokeStyle(1, 0x1a2a14, 0.4);
+          const palette = (kind === 'path' || kind === 'camp') ? fallbackPath : fallbackGrass;
+          const c = palette[Math.floor(rng() * palette.length)];
+          const diamond = this.add.polygon(x, y, [0, -isoH/2, isoW/2, 0, 0, isoH/2, -isoW/2, 0], c, 1);
+          diamond.setStrokeStyle(1, 0x1a2a14, 0.3);
           diamond.setDepth(y);
           this.proceduralGroup.push(diamond);
         }
       }
     }
 
-    // === Arbres dispersés sur la grille iso (atlas) ===
-    const hasTreeTiles = this.textures.exists('ex-lamber-trees')
-      && this.textures.get('ex-lamber-trees').frameTotal > 1;
-    const treeFrames = hasTreeTiles
-      ? this.textures.get('ex-lamber-trees').getFrameNames()
-      : [];
-    const occupied = new Set<string>();
-    const isBorder = (gx: number, gy: number) =>
-      gx < 2 || gy < 2 || gx >= cols - 2 || gy >= rows - 2;
-
-    // Zone de spawn (haut de la map, 4 cellules autour du spawn iso) — pas d'arbres
-    const spawnGx = Math.floor(cols * 0.5);
-    const spawnGy = Math.floor(rows * 0.1);
-    const isNearSpawn = (gx: number, gy: number) =>
-      Math.abs(gx - spawnGx) <= 2 && Math.abs(gy - spawnGy) <= 2;
-
+    // === Arbres dispersés (uniquement sur grass) ===
     const treeFallbackPalette = [
       { trunk: 0x3a2410, canopy: 0x2e5828 },
       { trunk: 0x4a3018, canopy: 0x3a6a32 },
       { trunk: 0x2a1810, canopy: 0x255424 },
     ];
+    const isBorder = (gx: number, gy: number) =>
+      gx < 2 || gy < 2 || gx >= cols - 2 || gy >= rows - 2;
 
     for (let gy = 0; gy < rows; gy++) {
       for (let gx = 0; gx < cols; gx++) {
-        if (isNearSpawn(gx, gy)) continue;
+        if (plan[gy][gx] !== 'grass') continue;
         const inBorder = isBorder(gx, gy);
-        const dens = inBorder ? 0.75 : proc.treeDensity;
+        const dens = inBorder ? 0.9 : proc.treeDensity;
         if (rng() > dens) continue;
-        const key = `${gx},${gy}`;
-        if (occupied.has(key)) continue;
-        occupied.add(key);
         const { x, y } = iso(gx, gy);
-        // Léger jitter dans le losange pour casser la régularité
-        const jx = (rng() - 0.5) * isoW * 0.3;
-        const jy = (rng() - 0.5) * isoH * 0.3;
-        if (hasTreeTiles && treeFrames.length > 0) {
+        const jx = (rng() - 0.5) * isoW * 0.35;
+        const jy = (rng() - 0.5) * isoH * 0.35;
+        if (hasTrees && treeFrames.length > 0) {
           const frameName = treeFrames[Math.floor(rng() * treeFrames.length)];
           const tr = this.add.sprite(x + jx, y + jy, 'ex-lamber-trees', frameName);
           tr.setOrigin(0.5, 0.88);
-          // Scale : chaque tile a sa propre largeur (irrégulière). On scale
-          // pour matcher ~isoW × 1.1 selon la largeur de la frame source.
           const frameW = tr.width || proc.treeTileW;
           const baseScale = (isoW * 1.0) / Math.max(80, frameW);
           const variation = 0.85 + rng() * 0.3;
@@ -755,100 +874,62 @@ export class ExplorationScene extends Phaser.Scene {
       }
     }
 
-    // === Camps de bandits / gobelins / cultistes ===
-    const campTypes: Array<{ kind: 'bandits' | 'gobelins' | 'cultistes'; label: string; icon: string }> = [
-      { kind: 'bandits',   label: '⚔️ Camp de bandits',   icon: '🏕️' },
-      { kind: 'gobelins',  label: '⚔️ Camp de gobelins',  icon: '🛖' },
-      { kind: 'cultistes', label: '⚔️ Cultistes',          icon: '🕯️' },
-    ];
-    const hasCampTiles = this.textures.exists('ex-lamber-camps')
-      && this.textures.get('ex-lamber-camps').frameTotal > 1;
-    const campFrames = hasCampTiles
-      ? this.textures.get('ex-lamber-camps').getFrameNames()
-      : [];
+    // === Camps composites : chaque camp = plusieurs tiles selon la recette ===
+    for (let i = 0; i < placedCamps.length; i++) {
+      const camp = placedCamps[i];
+      const center = iso(camp.gx, camp.gy);
+      const recipe = CAMP_RECIPES[camp.type.kind];
 
-    // Placement sur grille iso avec espacement minimum (en cellules)
-    const placedCamps: { gx: number; gy: number }[] = [];
-    const minCampCellDist = 5;
-    let tries = 0;
-    while (placedCamps.length < proc.campCount && tries < 300) {
-      tries++;
-      const gx = 3 + Math.floor(rng() * (cols - 6));
-      const gy = 4 + Math.floor(rng() * (rows - 7));
-      if (isNearSpawn(gx, gy)) continue;
-      let ok = true;
-      for (const c of placedCamps) {
-        if (Math.max(Math.abs(c.gx - gx), Math.abs(c.gy - gy)) < minCampCellDist) {
-          ok = false; break;
+      for (const piece of recipe) {
+        const pos = iso(camp.gx + piece.dx, camp.gy + piece.dy);
+        const catFrames = C[piece.cat];
+        if (hasCamps && catFrames && catFrames.length > 0) {
+          const frameName = pickFrame(catFrames)!;
+          const sprite = this.add.sprite(pos.x, pos.y, 'ex-lamber-camps', frameName);
+          sprite.setOrigin(0.5, 0.85);
+          const frameW = sprite.width || proc.campTileW;
+          sprite.setScale((isoW * 1.1) / Math.max(80, frameW));
+          sprite.setDepth(pos.y + 0.7);
+          this.proceduralGroup.push(sprite);
+        } else {
+          // Fallback : tente colorée par catégorie
+          const palette: Record<string, number> = {
+            tents: 0xa04020, fires: 0xff8030, palissade: 0x6a4a2a, banners: 0x802020,
+            crates: 0x8a6a3a, carts: 0x4a3018, weapons: 0x404040,
+            altars: 0x5a2020, candles: 0xffd060, skulls: 0xe0e0c8,
+          };
+          const c = palette[piece.cat] || 0x804040;
+          const tent = this.add.triangle(pos.x, pos.y, -22, 14, 22, 14, 0, -22, c, 0.95);
+          tent.setStrokeStyle(2, 0x1a0e08);
+          tent.setDepth(pos.y + 0.7);
+          this.proceduralGroup.push(tent);
         }
       }
-      if (!ok) continue;
-      placedCamps.push({ gx, gy });
 
-      const campType = campTypes[placedCamps.length % campTypes.length];
-      const { x, y } = iso(gx, gy);
-
-      // Marque la cellule + ses voisines comme occupées (pas d'arbre par-dessus)
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        occupied.add(`${gx + dx},${gy + dy}`);
-      }
-
-      // Visuel du camp
-      if (hasCampTiles && campFrames.length > 0) {
-        const frameName = campFrames[Math.floor(rng() * campFrames.length)];
-        const camp = this.add.sprite(x, y, 'ex-lamber-camps', frameName);
-        camp.setOrigin(0.5, 0.85);
-        const frameW = camp.width || proc.campTileW;
-        camp.setScale((isoW * 1.2) / Math.max(80, frameW));
-        camp.setDepth(y + 0.7);
-        this.proceduralGroup.push(camp);
-      } else {
-        // Fallback : tente + feu
-        const tent = this.add.triangle(x, y, -30, 20, 30, 20, 0, -28, 0xa04020, 0.95);
-        tent.setStrokeStyle(2, 0x1a0e08);
-        tent.setDepth(y + 0.7);
-        this.proceduralGroup.push(tent);
-        const flame = this.add.ellipse(x + 30, y, 10, 14, 0xffa040);
-        flame.setDepth(y + 0.8);
-        this.tweens.add({
-          targets: flame,
-          scaleY: { from: 0.9, to: 1.15 },
-          duration: 350,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-        this.proceduralGroup.push(flame);
-      }
-
-      // Étiquette texte au-dessus du camp
-      const tag = this.add.text(x, y - isoH * 1.5, `${campType.icon} ${campType.kind}`, {
+      // Étiquette flottante au-dessus du camp
+      const tag = this.add.text(center.x, center.y - isoH * 2.2, `${camp.type.icon} ${camp.type.kind}`, {
         fontFamily: 'Georgia, serif',
-        fontSize: '12px',
+        fontSize: '14px',
         color: '#ffe080',
         stroke: '#000',
-        strokeThickness: 3,
+        strokeThickness: 4,
+        fontStyle: 'bold',
       });
       tag.setOrigin(0.5);
       tag.setDepth(99998);
       this.proceduralGroup.push(tag);
 
-      // Injecte l'interactable "combat" au centre du camp (en coords iso)
+      // Interactable de combat au centre du camp
       this.pendingProceduralInteractables.push({
         type: 'boss',
-        id: `camp-${placedCamps.length}-${campType.kind}`,
-        x: (x - this.worldOffsetX) / this.worldW,
-        y: (y - this.worldOffsetY) / this.worldH,
+        id: `camp-${i}-${camp.type.kind}`,
+        x: (center.x - this.worldOffsetX) / this.worldW,
+        y: (center.y - this.worldOffsetY) / this.worldH,
         spriteKey: '__placeholder__',
-        label: campType.label,
+        label: camp.type.label,
         engages: true,
       });
     }
-
-    // Walkable iso : un grand losange centré sur la grille
-    // (toutes les cellules sont marchables pour le joueur en V1)
-    // On laisse walkable vide → pas de contrainte (le joueur peut bouger partout
-    // dans la map). Future amélioration : collisions par tile.
   }
 
 }
