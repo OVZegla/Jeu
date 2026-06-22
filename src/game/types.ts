@@ -120,7 +120,7 @@ export type GamePhase =
 
 // === Exploration (scènes pré-combat) ===
 
-export type MapId = 'bureau' | 'ramees';
+export type MapId = 'bureau' | 'ramees' | 'lamber';
 
 export type Interactable =
   | {
@@ -161,6 +161,18 @@ export interface ExplorationMapConfig {
   ambianceColor?: number;    // teinte du voile sombre (optionnel)
   walkable?: WalkableRect[]; // si défini, le joueur ne peut sortir de l'union
   playerScale?: number;      // multiplicateur de la taille du joueur (défaut 1)
+  procedural?: ProceduralConfig; // si défini, la map est générée à la volée
+}
+
+// Configuration de génération procédurale (Lamber etc.)
+export interface ProceduralConfig {
+  type: 'forest';
+  worldW: number;             // taille de la map générée (px)
+  worldH: number;
+  tileSize: number;           // taille d'une tuile de sol (px)
+  treeDensity: number;        // 0..1 — probabilité d'un arbre par cellule
+  campCount: number;          // nombre de camps à placer
+  seed?: number;              // pour la reproductibilité (optionnel)
 }
 
 export interface PendingTargetSelection {

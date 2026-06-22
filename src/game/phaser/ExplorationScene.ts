@@ -72,6 +72,12 @@ export class ExplorationScene extends Phaser.Scene {
   private debugGfx: Phaser.GameObjects.Graphics | null = null;
   private debugMode = false;
 
+  // Objets procéduraux (à nettoyer entre les maps)
+  private proceduralGroup: Phaser.GameObjects.GameObject[] = [];
+  // Interactables créés par la génération procédurale (camps), à injecter
+  // dans le tableau interactables avec ceux du config
+  private pendingProceduralInteractables: Interactable[] = [];
+
   constructor(events: ExplorationSceneEvents, initialMapId: MapId = 'bureau') {
     super({ key: 'ExplorationScene' });
     this.events_ = events;
@@ -91,6 +97,12 @@ export class ExplorationScene extends Phaser.Scene {
     this.load.image('ex-datpaloof-back', `${base}assets/exploration/datpaloof/back.png`);
     this.load.image('ex-datpaloof-left', `${base}assets/exploration/datpaloof/left.png`);
     this.load.image('ex-datpaloof-right', `${base}assets/exploration/datpaloof/right.png`);
+
+    // Tile sheets pour la génération procédurale (Lamber)
+    // Si pas uploadés, on tombe sur des placeholders procéduraux.
+    this.load.image('ex-lamber-ground', `${base}assets/exploration/lamber/tilesets/ground.png`);
+    this.load.image('ex-lamber-trees', `${base}assets/exploration/lamber/tilesets/trees.png`);
+    this.load.image('ex-lamber-camps', `${base}assets/exploration/lamber/tilesets/camps.png`);
 
     // Tolère silencieusement les assets manquants
     this.load.on('loaderror', (file: { key: string; url: string }) => {
@@ -186,12 +198,20 @@ export class ExplorationScene extends Phaser.Scene {
     if (this.bg) this.bg.destroy();
     if (this.veil) this.veil.destroy();
 
+    // Nettoie les objets procéduraux précédents
+    for (const o of this.proceduralGroup) o.destroy();
+    this.proceduralGroup = [];
+
     const config = getMap(mapId);
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // Si la map n'a pas été chargée (asset manquant) → background dégradé placeholder
-    if (this.textures.exists(config.imageKey)) {
+    // === Cas 1 : map procédurale (forêt) ===
+    if (config.procedural) {
+      this.generateProceduralMap(config, w, h);
+    }
+    // === Cas 2 : map avec image background ===
+    else if (this.textures.exists(config.imageKey)) {
       this.bg = this.add.image(w / 2, h / 2, config.imageKey);
       const s = Math.min(w / this.bg.width, h / this.bg.height);
       this.bg.setScale(s);
@@ -221,13 +241,15 @@ export class ExplorationScene extends Phaser.Scene {
     this.worldOffsetX = (w - this.worldW) / 2;
     this.worldOffsetY = (h - this.worldH) / 2;
 
-    // Voile sombre d'ambiance
-    if (config.ambianceColor) {
-      this.veil = this.add.rectangle(w / 2, h / 2, w, h, config.ambianceColor, 0.25);
-      this.veil.setDepth(1);
-    } else {
-      this.veil = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.1);
-      this.veil.setDepth(1);
+    // Voile sombre d'ambiance (skip pour procédural — la forêt a déjà ses tons)
+    if (!config.procedural) {
+      if (config.ambianceColor) {
+        this.veil = this.add.rectangle(w / 2, h / 2, w, h, config.ambianceColor, 0.25);
+        this.veil.setDepth(1);
+      } else {
+        this.veil = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.1);
+        this.veil.setDepth(1);
+      }
     }
 
     // Walkable zones → coords monde
@@ -249,8 +271,13 @@ export class ExplorationScene extends Phaser.Scene {
     this.logicalY = this.worldOffsetY + this.worldH * config.spawn.y;
     this.snapToWalkable();
 
-    // Interactables
-    for (const it of config.interactables) {
+    // Interactables : ceux du config + ceux générés par le procédural (camps)
+    const allInteractables: Interactable[] = [
+      ...config.interactables,
+      ...this.pendingProceduralInteractables,
+    ];
+    this.pendingProceduralInteractables = [];
+    for (const it of allInteractables) {
       const worldX = this.worldOffsetX + this.worldW * it.x;
       const worldY = this.worldOffsetY + this.worldH * it.y;
       const group = this.spawnInteractable(it, worldX, worldY);
@@ -306,6 +333,11 @@ export class ExplorationScene extends Phaser.Scene {
     const group: Phaser.GameObjects.GameObject[] = [];
 
     if (it.type === 'boss') {
+      // Spécial : si spriteKey commence par '__' (ex: '__placeholder__'),
+      // le visuel est déjà géré ailleurs (camp procédural) → on ne dessine rien.
+      if (it.spriteKey.startsWith('__')) {
+        return group;
+      }
       // Sprite boss (si dispo)
       if (this.textures.exists(it.spriteKey)) {
         const shadow = this.add.ellipse(x, y + 3, 56, 11, 0x000000, 0.5);
@@ -576,4 +608,235 @@ export class ExplorationScene extends Phaser.Scene {
     this.loadMap(mapId);
     this.cameras.main.fadeIn(280, 0, 0, 0);
   }
+
+  // === Génération procédurale (Forêt de Lamber) ===
+  private generateProceduralMap(config: import('../types').ExplorationMapConfig, viewW: number, viewH: number) {
+    const proc = config.procedural!;
+    this.worldW = proc.worldW;
+    this.worldH = proc.worldH;
+    // Si le viewport est plus grand que la map, on centre la map. Si plus petit,
+    // la map peut dépasser (camera fixe, pas de scroll en V1).
+    this.worldOffsetX = (viewW - this.worldW) / 2;
+    this.worldOffsetY = (viewH - this.worldH) / 2;
+
+    // Seed (déterministe si fourni, sinon random)
+    let seed = proc.seed ?? Math.floor(Math.random() * 1e9);
+    const rng = mulberry32(seed);
+
+    // === Sol ===
+    // Si tilesheet ground dispo → on tile avec random tiles. Sinon → gradient
+    // procédural en formes Phaser.
+    const ts = proc.tileSize;
+    const cols = Math.ceil(this.worldW / ts);
+    const rows = Math.ceil(this.worldH / ts);
+    const hasGroundTiles = this.textures.exists('ex-lamber-ground');
+
+    // Couleurs de fallback pour le sol (variations de vert/marron)
+    const fallbackGround = [0x3a5a2a, 0x426a30, 0x4a6b2e, 0x5a7a36, 0x3e5826];
+
+    if (hasGroundTiles) {
+      // Découpe ground en tiles si pas déjà fait. On suppose 32x32 par tile.
+      const TILE_SRC = 32;
+      this.ensureSpritesheet('ex-lamber-ground', TILE_SRC, TILE_SRC);
+      const tex = this.textures.get('ex-lamber-ground');
+      const totalTiles = tex.frameTotal - 1; // -1 car __BASE
+      for (let cy = 0; cy < rows; cy++) {
+        for (let cx = 0; cx < cols; cx++) {
+          const wx = this.worldOffsetX + cx * ts + ts / 2;
+          const wy = this.worldOffsetY + cy * ts + ts / 2;
+          const frame = Math.floor(rng() * totalTiles);
+          const sprite = this.add.sprite(wx, wy, 'ex-lamber-ground', frame);
+          sprite.setDisplaySize(ts, ts);
+          sprite.setDepth(0);
+          this.proceduralGroup.push(sprite);
+        }
+      }
+    } else {
+      // Fallback : rectangles colorés
+      for (let cy = 0; cy < rows; cy++) {
+        for (let cx = 0; cx < cols; cx++) {
+          const wx = this.worldOffsetX + cx * ts + ts / 2;
+          const wy = this.worldOffsetY + cy * ts + ts / 2;
+          const c = fallbackGround[Math.floor(rng() * fallbackGround.length)];
+          const r = this.add.rectangle(wx, wy, ts, ts, c, 1);
+          r.setDepth(0);
+          this.proceduralGroup.push(r);
+        }
+      }
+    }
+
+    // === Bordure de la forêt (arbres denses tout autour) ===
+    // pour éviter que le joueur se sente "hors-monde"
+    const borderCells = 2;
+    const isBorder = (cx: number, cy: number) =>
+      cx < borderCells || cy < borderCells || cx >= cols - borderCells || cy >= rows - borderCells;
+
+    // === Arbres dispersés (densité config) ===
+    const hasTreeTiles = this.textures.exists('ex-lamber-trees');
+    if (hasTreeTiles) {
+      this.ensureSpritesheet('ex-lamber-trees', 64, 96);
+    }
+    const treeFallbackPalette = [
+      { trunk: 0x3a2410, canopy: 0x2e5828 },
+      { trunk: 0x4a3018, canopy: 0x3a6a32 },
+      { trunk: 0x2a1810, canopy: 0x255424 },
+    ];
+
+    for (let cy = 0; cy < rows; cy++) {
+      for (let cx = 0; cx < cols; cx++) {
+        const inBorder = isBorder(cx, cy);
+        const dens = inBorder ? 0.7 : proc.treeDensity;
+        if (rng() > dens) continue;
+        const wx = this.worldOffsetX + cx * ts + ts / 2 + (rng() - 0.5) * ts * 0.6;
+        const wy = this.worldOffsetY + cy * ts + ts / 2 + (rng() - 0.5) * ts * 0.6;
+        if (hasTreeTiles) {
+          const tex = this.textures.get('ex-lamber-trees');
+          const totalFrames = Math.max(1, tex.frameTotal - 1);
+          const frame = Math.floor(rng() * totalFrames);
+          const tr = this.add.sprite(wx, wy, 'ex-lamber-trees', frame);
+          tr.setOrigin(0.5, 0.85);
+          const scale = 0.9 + rng() * 0.3;
+          tr.setScale(scale);
+          tr.setDepth(wy);
+          this.proceduralGroup.push(tr);
+        } else {
+          const pal = treeFallbackPalette[Math.floor(rng() * treeFallbackPalette.length)];
+          const size = 22 + rng() * 16;
+          const canopy = this.add.circle(wx, wy - size * 0.4, size, pal.canopy);
+          canopy.setStrokeStyle(2, 0x0a1a08, 0.6);
+          canopy.setDepth(wy);
+          const trunk = this.add.rectangle(wx, wy + 4, 6, 14, pal.trunk);
+          trunk.setDepth(wy - 0.1);
+          this.proceduralGroup.push(canopy);
+          this.proceduralGroup.push(trunk);
+        }
+      }
+    }
+
+    // === Camps de bandits / gobelins / cultistes ===
+    const campTypes: Array<{ kind: 'bandits' | 'gobelins' | 'cultistes'; color: number; label: string; icon: string }> = [
+      { kind: 'bandits',   color: 0xb05828, label: '⚔️ Camp de bandits',   icon: '🏕️' },
+      { kind: 'gobelins',  color: 0x6aa040, label: '⚔️ Camp de gobelins',  icon: '🛖' },
+      { kind: 'cultistes', color: 0xa040b0, label: '⚔️ Cultistes',          icon: '🕯️' },
+    ];
+    const hasCampTiles = this.textures.exists('ex-lamber-camps');
+    if (hasCampTiles) {
+      this.ensureSpritesheet('ex-lamber-camps', 96, 96);
+    }
+
+    // Placement sur grille en respectant un espacement minimum
+    const placedCamps: { x: number; y: number }[] = [];
+    const minCampDist = 350;
+    let tries = 0;
+    while (placedCamps.length < proc.campCount && tries < 200) {
+      tries++;
+      // Évite la bordure (zone des arbres) et la zone de spawn (haut)
+      const x = this.worldOffsetX + this.worldW * (0.15 + rng() * 0.70);
+      const y = this.worldOffsetY + this.worldH * (0.20 + rng() * 0.70);
+      let ok = true;
+      for (const c of placedCamps) {
+        if (Phaser.Math.Distance.Between(x, y, c.x, c.y) < minCampDist) { ok = false; break; }
+      }
+      if (!ok) continue;
+      placedCamps.push({ x, y });
+
+      const campType = campTypes[placedCamps.length % campTypes.length];
+
+      // Clairière : un cercle plus clair sous le camp
+      const clearing = this.add.ellipse(x, y, 130, 80, 0x6a8042, 0.55);
+      clearing.setDepth(0.5);
+      this.proceduralGroup.push(clearing);
+
+      // Visuel du camp
+      if (hasCampTiles) {
+        const tex = this.textures.get('ex-lamber-camps');
+        const totalFrames = Math.max(1, tex.frameTotal - 1);
+        const frame = Math.floor(rng() * totalFrames);
+        const camp = this.add.sprite(x, y, 'ex-lamber-camps', frame);
+        camp.setOrigin(0.5, 0.85);
+        camp.setDepth(y);
+        this.proceduralGroup.push(camp);
+      } else {
+        // Fallback : tente triangulaire + feu
+        const tent = this.add.triangle(x, y, -30, 20, 30, 20, 0, -28, campType.color, 0.95);
+        tent.setStrokeStyle(2, 0x1a0e08);
+        tent.setDepth(y);
+        this.proceduralGroup.push(tent);
+        // Petit feu de camp
+        const fireBase = this.add.ellipse(x + 30, y + 12, 18, 6, 0x2a1408);
+        fireBase.setDepth(y);
+        const flame = this.add.ellipse(x + 30, y + 4, 10, 14, 0xffa040);
+        flame.setDepth(y + 0.1);
+        this.tweens.add({
+          targets: flame,
+          scaleY: { from: 0.9, to: 1.15 },
+          duration: 350,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+        this.proceduralGroup.push(fireBase);
+        this.proceduralGroup.push(flame);
+      }
+
+      // Étiquette texte au-dessus du camp
+      const tag = this.add.text(x, y - 60, `${campType.icon} ${campType.kind}`, {
+        fontFamily: 'Georgia, serif',
+        fontSize: '11px',
+        color: '#ffe080',
+        stroke: '#000',
+        strokeThickness: 3,
+      });
+      tag.setOrigin(0.5);
+      tag.setDepth(y + 1);
+      this.proceduralGroup.push(tag);
+
+      // Injecte un interactable "combat" au centre du camp
+      this.pendingProceduralInteractables.push({
+        type: 'boss',
+        id: `camp-${placedCamps.length}-${campType.kind}`,
+        x: (x - this.worldOffsetX) / this.worldW,
+        y: (y - this.worldOffsetY) / this.worldH,
+        spriteKey: '__placeholder__',
+        label: campType.label,
+        engages: true,
+      });
+    }
+
+    // Walkable : si pas défini explicitement, tout le monde de la map est marchable
+    // (les arbres et camps sont visuels seulement en V1)
+  }
+
+  // Si la texture est chargée comme image plate, on la re-déclare comme spritesheet
+  // avec la taille de tile donnée. Idempotent.
+  private ensureSpritesheet(key: string, frameWidth: number, frameHeight: number) {
+    const tex = this.textures.get(key);
+    // Si déjà spritesheet (frameTotal > 1), on ne refait pas
+    if (tex.frameTotal > 1) return;
+    const src = tex.getSourceImage() as HTMLImageElement;
+    const w = src.width;
+    const h = src.height;
+    // On enlève la texture image et on la recharge en spritesheet à partir du même src
+    this.textures.remove(key);
+    this.textures.addSpriteSheet(key, src as any, {
+      frameWidth, frameHeight,
+      margin: 0, spacing: 0,
+      endFrame: -1,
+      // dimensions calculées auto par Phaser à partir de src + frameW/H
+    } as any);
+    // (w*h utilisés implicitement par Phaser pour calculer les frames)
+    void w; void h;
+  }
+}
+
+// PRNG seedable simple (Mulberry32)
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }

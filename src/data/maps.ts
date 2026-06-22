@@ -55,6 +55,15 @@ export const RAMEES_MAP: ExplorationMapConfig = {
       toMapId: 'bureau',
       label: '🪨 Retourner au Bureau',
     },
+    // Pont en bas à gauche → Forêt de Lamber
+    {
+      type: 'teleport',
+      id: 'tp-to-lamber',
+      x: 0.22,
+      y: 0.93,
+      toMapId: 'lamber',
+      label: '🌲 Entrer dans la Forêt de Lamber',
+    },
   ],
   ambianceColor: 0x000010,
   // Routes : grille permissive de départ — à itérer avec le mode debug.
@@ -68,9 +77,43 @@ export const RAMEES_MAP: ExplorationMapConfig = {
   playerScale: 0.55,
 };
 
+// === La Forêt de Lamber (génération procédurale) ===
+// Map générée à la volée à partir de tile sheets. Le sol, les arbres et
+// les camps sont placés aléatoirement à chaque entrée.
+export const LAMBER_MAP: ExplorationMapConfig = {
+  id: 'lamber',
+  name: 'Forêt de Lamber',
+  imageKey: '__procedural-lamber__',
+  imagePath: '', // pas d'image, généré à la volée
+  spawn: { x: 0.50, y: 0.06 }, // arrive en haut de la forêt
+  interactables: [
+    // Retour vers Ramees en haut de la map (par où on est arrivé)
+    {
+      type: 'teleport',
+      id: 'tp-to-ramees-from-lamber',
+      x: 0.50,
+      y: 0.04,
+      toMapId: 'ramees',
+      label: '↩️ Retourner à Ramees',
+    },
+    // Les camps sont injectés dynamiquement par la scène lors de la génération
+  ],
+  ambianceColor: 0x081a0c,
+  playerScale: 0.85,
+  procedural: {
+    type: 'forest',
+    worldW: 1800,
+    worldH: 1400,
+    tileSize: 48,
+    treeDensity: 0.18,
+    campCount: 3,
+  },
+};
+
 export const MAPS: Record<string, ExplorationMapConfig> = {
   bureau: BUREAU_MAP,
   ramees: RAMEES_MAP,
+  lamber: LAMBER_MAP,
 };
 
 export function getMap(id: string): ExplorationMapConfig {

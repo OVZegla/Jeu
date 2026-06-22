@@ -15,8 +15,8 @@ export function ExplorationScreen({ onEngage }: Props) {
   const sceneRef = useRef<ExplorationScene | null>(null);
   const [mapId, setMapId] = useState<MapId>('bureau');
   const [promptLabel, setPromptLabel] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Refs pour callbacks à jour
   const onEngageRef = useRef(onEngage);
   const setMapIdRef = useRef(setMapId);
   useEffect(() => { onEngageRef.current = onEngage; }, [onEngage]);
@@ -56,8 +56,7 @@ export function ExplorationScreen({ onEngage }: Props) {
     };
   }, []);
 
-  // Quand le state mapId change, demande à la scène de switcher.
-  // Skip le tout premier render : la scène charge déjà 'bureau' dans son create().
+  // Skip le premier render (la scène charge 'bureau' dans son create())
   const isFirstMapRender = useRef(true);
   useEffect(() => {
     if (isFirstMapRender.current) {
@@ -66,10 +65,27 @@ export function ExplorationScreen({ onEngage }: Props) {
     }
     sceneRef.current?.applyMapSwitch(mapId);
     setPromptLabel(null);
+    setMenuOpen(false);
   }, [mapId]);
 
+  // Ouvre/ferme le menu pause avec ESC
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMenuOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const map = getMap(mapId);
-  const isEngagePrompt = !!promptLabel && promptLabel.includes('combat');
+  const isEngagePrompt = !!promptLabel && (promptLabel.includes('combat') || promptLabel.includes('⚔'));
+
+  const handleTeleport = (targetMapId: MapId) => {
+    setMenuOpen(false);
+    if (targetMapId !== mapId) setMapId(targetMapId);
+  };
 
   return (
     <div className="exploration-screen">
@@ -84,10 +100,19 @@ export function ExplorationScreen({ onEngage }: Props) {
         </div>
       </div>
 
+      <button
+        className="ex-menu-btn"
+        onClick={() => setMenuOpen((o) => !o)}
+        title="Menu (Échap)"
+        aria-label="Menu"
+      >☰</button>
+
       <div className="ex-controls-hint">
         <span className="ex-key">↑↓←→</span> / <span className="ex-key">WASD</span>
         &nbsp;•&nbsp;
         <span className="ex-key">ESPACE</span> interagir
+        &nbsp;•&nbsp;
+        <span className="ex-key">ÉCHAP</span> menu
         &nbsp;•&nbsp; tap pour aller
       </div>
 
@@ -95,14 +120,53 @@ export function ExplorationScreen({ onEngage }: Props) {
         <button
           className={`ex-engage-btn ${isEngagePrompt ? 'ex-engage-btn-combat' : 'ex-engage-btn-teleport'}`}
           onClick={() => {
-            // Déclenche l'interaction via une touche virtuelle :
-            // on demande à la scène d'effectuer l'interaction.
             const scene = sceneRef.current as any;
             scene?.interact?.();
           }}
         >
           {promptLabel}
         </button>
+      )}
+
+      {menuOpen && (
+        <div className="ex-menu-overlay" onClick={() => setMenuOpen(false)}>
+          <div className="ex-menu-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="ex-menu-title">▶ Menu</div>
+            <ul className="ex-menu-list">
+              <li>
+                <button
+                  className="ex-menu-item"
+                  onClick={() => setMenuOpen(false)}
+                >↩ Reprendre</button>
+              </li>
+              {mapId !== 'ramees' && (
+                <li>
+                  <button
+                    className="ex-menu-item"
+                    onClick={() => handleTeleport('ramees')}
+                  >🏘 Retour à Ramees</button>
+                </li>
+              )}
+              {mapId !== 'bureau' && (
+                <li>
+                  <button
+                    className="ex-menu-item"
+                    onClick={() => handleTeleport('bureau')}
+                  >📚 Retour au Bureau</button>
+                </li>
+              )}
+              {mapId !== 'lamber' && (
+                <li>
+                  <button
+                    className="ex-menu-item"
+                    onClick={() => handleTeleport('lamber')}
+                    title="(debug : accès direct)"
+                  >🌲 Forêt de Lamber</button>
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
       )}
     </div>
   );
