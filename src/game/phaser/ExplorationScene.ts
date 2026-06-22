@@ -9,6 +9,7 @@ export interface ExplorationSceneEvents {
   onNearInteractable?: (label: string | null) => void;
   onEngage?: () => void;
   onTeleport?: (toMapId: MapId, fromSide?: ExitSide) => void;
+  onOpenTeleportMenu?: (destinations: Array<{ toMapId: MapId; label: string }>) => void;
 }
 
 const PLAYER_SPEED = 180;
@@ -76,6 +77,8 @@ export class ExplorationScene extends Phaser.Scene {
   private currentExits: Partial<Record<ExitSide, import('../types').MapExit>> = {};
   // Côté d'entrée pour la prochaine map (passé via applyMapSwitch)
   private nextEntrySide: ExitSide | null = null;
+  // Particules d'indicateurs aux exits (nettoyées entre les maps)
+  private exitParticles: Phaser.GameObjects.GameObject[] = [];
 
   constructor(events: ExplorationSceneEvents, initialMapId: MapId = 'bureau') {
     super({ key: 'ExplorationScene' });
@@ -189,9 +192,11 @@ export class ExplorationScene extends Phaser.Scene {
     }
     this.interactables = [];
 
-    // Nettoie l'ancien fond
+    // Nettoie l'ancien fond + particules d'exit
     if (this.bg) this.bg.destroy();
     if (this.veil) this.veil.destroy();
+    for (const p of this.exitParticles) p.destroy();
+    this.exitParticles = [];
 
     const config = getMap(mapId);
     this.currentExits = config.exits || {};
@@ -297,6 +302,9 @@ export class ExplorationScene extends Phaser.Scene {
     );
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
+    // Particules brillantes aux exits (indique où sortir de la map)
+    this.spawnExitIndicators();
+
     // (Re)dessine le debug si actif
     this.renderDebug();
   }
@@ -370,6 +378,9 @@ export class ExplorationScene extends Phaser.Scene {
         group.push(placeholder);
       }
     } else if (it.type === 'teleport') {
+      const stone = this.spawnSummonStone(x, y);
+      for (const g of stone) group.push(g);
+    } else if (it.type === 'teleportMenu') {
       const stone = this.spawnSummonStone(x, y);
       for (const g of stone) group.push(g);
     }
@@ -612,12 +623,24 @@ export class ExplorationScene extends Phaser.Scene {
       this.time.delayedCall(300, () => this.events_.onEngage?.());
     } else if (it.type === 'teleport') {
       this.switching = true;
-      // Fondu noir, puis change de map
       this.cameras.main.fadeOut(280, 0, 0, 0);
       this.time.delayedCall(300, () => {
         this.events_.onTeleport?.(it.toMapId);
       });
+    } else if (it.type === 'teleportMenu') {
+      // Ouvre le menu React (pas de fade pour l'instant — le menu peut être annulé)
+      this.events_.onOpenTeleportMenu?.(it.destinations);
     }
+  }
+
+  // Déclenche un téléport (appelé depuis React après choix dans le menu)
+  triggerTeleport(toMapId: MapId) {
+    if (this.switching) return;
+    this.switching = true;
+    this.cameras.main.fadeOut(280, 0, 0, 0);
+    this.time.delayedCall(300, () => {
+      this.events_.onTeleport?.(toMapId);
+    });
   }
 
   // Appelée depuis React après bascule de map (côté state)
@@ -657,5 +680,90 @@ export class ExplorationScene extends Phaser.Scene {
     this.time.delayedCall(280, () => {
       this.events_.onTeleport?.(toMapId, opposite[_fromSide]);
     });
+  }
+
+  // Particules dorées brillantes aux exits — indique au joueur qu'il peut sortir
+  private spawnExitIndicators() {
+    const sides: ExitSide[] = ['north', 'south', 'east', 'west'];
+    // Crée la texture de particule (canvas radial gold) une seule fois
+    if (!this.textures.exists('p-exit-glow')) {
+      const c = document.createElement('canvas');
+      c.width = 16; c.height = 16;
+      const ctx = c.getContext('2d')!;
+      const g = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+      g.addColorStop(0, 'rgba(255,240,150,1)');
+      g.addColorStop(0.5, 'rgba(255,200,80,0.6)');
+      g.addColorStop(1, 'rgba(255,160,40,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 16, 16);
+      this.textures.addCanvas('p-exit-glow', c);
+    }
+
+    for (const side of sides) {
+      const exit = this.currentExits[side];
+      if (!exit) continue;
+      // Position de l'indicateur sur la map source
+      const px = (exit.indicatorX !== undefined ? exit.indicatorX : (
+        side === 'east' ? 0.97 : side === 'west' ? 0.03 : 0.50
+      ));
+      const py = (exit.indicatorY !== undefined ? exit.indicatorY : (
+        side === 'south' ? 0.97 : side === 'north' ? 0.03 : 0.50
+      ));
+      const wx = this.worldOffsetX + this.worldW * px;
+      const wy = this.worldOffsetY + this.worldH * py;
+
+      // Halo lumineux qui pulse
+      const halo = this.add.ellipse(wx, wy, 70, 28, 0xffe080, 0.35);
+      halo.setDepth(wy);
+      halo.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: halo,
+        scale: { from: 0.85, to: 1.25 },
+        alpha: { from: 0.25, to: 0.55 },
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      this.exitParticles.push(halo);
+
+      // Émetteur de particules brillantes qui montent du sol
+      const emitter = this.add.particles(wx, wy, 'p-exit-glow', {
+        lifespan: 1400,
+        speedY: { min: -50, max: -20 },
+        speedX: { min: -15, max: 15 },
+        scale: { start: 1.0, end: 0 },
+        alpha: { start: 0.9, end: 0 },
+        frequency: 110,
+        blendMode: 'ADD',
+        emitZone: {
+          type: 'random',
+          source: new Phaser.Geom.Ellipse(0, 0, 40, 14),
+        } as any,
+      });
+      emitter.setDepth(wy + 1);
+      this.exitParticles.push(emitter);
+
+      // Petite flèche directionnelle texte (subtile)
+      const arrowChar = side === 'south' ? '▼' : side === 'north' ? '▲' : side === 'east' ? '▶' : '◀';
+      const arrow = this.add.text(wx, wy - 22, arrowChar, {
+        fontFamily: 'Georgia, serif',
+        fontSize: '22px',
+        color: '#ffe080',
+        stroke: '#000',
+        strokeThickness: 4,
+      });
+      arrow.setOrigin(0.5);
+      arrow.setDepth(wy + 2);
+      this.tweens.add({
+        targets: arrow,
+        alpha: { from: 0.55, to: 1 },
+        duration: 700,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      this.exitParticles.push(arrow);
+    }
   }
 }

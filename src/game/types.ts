@@ -129,11 +129,11 @@ export type Interactable =
   | {
       type: 'boss';
       id: string;
-      x: number; // 0..1 (fraction de largeur de map)
-      y: number; // 0..1
-      spriteKey: string;     // clé Phaser (ex: 'ex-boss')
-      label: string;         // texte affiché à proximité
-      engages: true;         // déclenche le combat
+      x: number;
+      y: number;
+      spriteKey: string;
+      label: string;
+      engages: true;
     }
   | {
       type: 'teleport';
@@ -141,7 +141,15 @@ export type Interactable =
       x: number;
       y: number;
       toMapId: MapId;
-      label: string;         // ex: "▼ Ramees"
+      label: string;
+    }
+  | {
+      type: 'teleportMenu';
+      id: string;
+      x: number;
+      y: number;
+      label: string;          // prompt à proximité, ex: "🪨 Pierre de téléport"
+      destinations: Array<{ toMapId: MapId; label: string }>;
     };
 
 // Zone marchable (rectangle normalisé 0..1 sur la map). Le joueur ne peut
@@ -164,6 +172,10 @@ export interface MapExit {
   // automatiquement le côté opposé centré.
   entryX?: number;
   entryY?: number;
+  // Position visuelle de l'indicateur (particules brillantes) sur la map source.
+  // 0..1. Si omis, centré sur le côté correspondant.
+  indicatorX?: number;
+  indicatorY?: number;
 }
 
 export interface ExplorationMapConfig {

@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { ExplorationScene } from '../game/phaser/ExplorationScene';
 import type { ExitSide, MapId } from '../game/types';
-import { getMap, LAMBER_ENTRY_ID } from '../data/maps';
+import { getMap, getZoneName, LAMBER_ENTRY_ID } from '../data/maps';
 import './ExplorationScreen.css';
+
+interface TeleportMenuState {
+  destinations: Array<{ toMapId: MapId; label: string }>;
+}
 
 interface Props {
   onEngage: () => void;
@@ -17,6 +21,9 @@ export function ExplorationScreen({ onEngage }: Props) {
   const [entrySide, setEntrySide] = useState<ExitSide | null>(null);
   const [promptLabel, setPromptLabel] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [teleportMenu, setTeleportMenu] = useState<TeleportMenuState | null>(null);
+  const [zoneTitle, setZoneTitle] = useState<string | null>(null);
+  const prevZoneRef = useRef<string>(getZoneName('ramees'));
 
   const onEngageRef = useRef(onEngage);
   useEffect(() => { onEngageRef.current = onEngage; }, [onEngage]);
@@ -32,7 +39,10 @@ export function ExplorationScreen({ onEngage }: Props) {
         setEntrySide(fromSide ?? null);
         setMapId(toMapId);
       },
-    }, mapId);  // mapId initial passé à la scène (sinon elle reste sur le défaut)
+      onOpenTeleportMenu: (destinations) => {
+        setTeleportMenu({ destinations });
+      },
+    }, mapId);
     sceneRef.current = scene;
 
     const game = new Phaser.Game({
@@ -58,16 +68,29 @@ export function ExplorationScreen({ onEngage }: Props) {
     };
   }, []);
 
-  // Skip le premier render (la scène charge 'bureau' dans son create())
+  // Skip le premier render (la scène charge la map initiale dans son create())
   const isFirstMapRender = useRef(true);
   useEffect(() => {
     if (isFirstMapRender.current) {
       isFirstMapRender.current = false;
-      return;
+      // Affiche aussi le zone title pour le tout premier écran
+      setZoneTitle(getZoneName(mapId));
+      const t = setTimeout(() => setZoneTitle(null), 2200);
+      return () => clearTimeout(t);
     }
     sceneRef.current?.applyMapSwitch(mapId, entrySide || undefined);
     setPromptLabel(null);
     setMenuOpen(false);
+    setTeleportMenu(null);
+
+    // Zone title overlay si on change de zone
+    const newZone = getZoneName(mapId);
+    if (newZone !== prevZoneRef.current) {
+      prevZoneRef.current = newZone;
+      setZoneTitle(newZone);
+      const t = setTimeout(() => setZoneTitle(null), 2400);
+      return () => clearTimeout(t);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapId]);
 
@@ -172,6 +195,42 @@ export function ExplorationScreen({ onEngage }: Props) {
               )}
             </ul>
           </div>
+        </div>
+      )}
+
+      {/* === Overlay menu téléport (pierre de tp) === */}
+      {teleportMenu && (
+        <div className="ex-tp-menu-overlay" onClick={() => setTeleportMenu(null)}>
+          <div className="ex-tp-menu-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="ex-tp-menu-title">🪨 Choisis ta destination</div>
+            <ul className="ex-menu-list">
+              {teleportMenu.destinations.map((d) => (
+                <li key={d.toMapId}>
+                  <button
+                    className="ex-menu-item"
+                    onClick={() => {
+                      setTeleportMenu(null);
+                      const scene = sceneRef.current as any;
+                      scene?.triggerTeleport?.(d.toMapId);
+                    }}
+                  >{d.label}</button>
+                </li>
+              ))}
+              <li>
+                <button
+                  className="ex-menu-item ex-menu-cancel"
+                  onClick={() => setTeleportMenu(null)}
+                >↩ Annuler</button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* === Zone title overlay (gros texte au milieu pendant 2s) === */}
+      {zoneTitle && (
+        <div className="ex-zone-title" key={zoneTitle}>
+          <div className="ex-zone-title-text">{zoneTitle}</div>
         </div>
       )}
     </div>
