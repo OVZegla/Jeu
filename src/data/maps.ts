@@ -102,21 +102,22 @@ export const LAMBER_MAP: ExplorationMapConfig = {
   playerScale: 0.75,
   procedural: {
     type: 'forest',
-    gridCols: 18,
-    gridRows: 18,
-    // Tailles des tiles dans les spritesheets (1448×1086) :
-    // - ground = 8 cols × 8 rows
-    // - trees  = 10 cols × 7 rows
-    // - camps  = 8 cols × 6 rows
-    groundTileW: 181,
-    groundTileH: 135,
+    gridCols: 14,
+    gridRows: 14,
+    // Atlas auto-détecté par scripts/build-lamber-atlas.py :
+    // - ground : 64 frames (diamonds ~165×120)
+    // - trees  : 64 frames de tailles variées
+    // - camps  : 51 frames de tailles variées
+    // Ces dimensions servent uniquement de valeurs de référence pour le scaling.
+    groundTileW: 165,
+    groundTileH: 120,
     treeTileW: 145,
-    treeTileH: 155,
+    treeTileH: 160,
     campTileW: 181,
     campTileH: 181,
-    // Projection iso : diamond largeur 128 × hauteur 64 sur l'écran
-    isoTileW: 128,
-    isoTileH: 64,
+    // Projection iso : diamond 96×70 (matche le ratio source 165:120 ≈ 1.37:1)
+    isoTileW: 96,
+    isoTileH: 70,
     treeDensity: 0.22,
     campCount: 3,
   },

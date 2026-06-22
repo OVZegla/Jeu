@@ -99,10 +99,17 @@ export class ExplorationScene extends Phaser.Scene {
     this.load.image('ex-datpaloof-right', `${base}assets/exploration/datpaloof/right.png`);
 
     // Tile sheets pour la génération procédurale (Lamber)
-    // Si pas uploadés, on tombe sur des placeholders procéduraux.
-    this.load.image('ex-lamber-ground', `${base}assets/exploration/lamber/tilesets/ground.png`);
-    this.load.image('ex-lamber-trees', `${base}assets/exploration/lamber/tilesets/trees.png`);
-    this.load.image('ex-lamber-camps', `${base}assets/exploration/lamber/tilesets/camps.png`);
+    // Chaque tilesheet a un atlas JSON généré par scripts/build-lamber-atlas.py
+    // qui définit la bounding box exacte de chaque tile (taille irrégulière).
+    this.load.atlas('ex-lamber-ground',
+      `${base}assets/exploration/lamber/tilesets/ground.png`,
+      `${base}assets/exploration/lamber/tilesets/ground.json`);
+    this.load.atlas('ex-lamber-trees',
+      `${base}assets/exploration/lamber/tilesets/trees.png`,
+      `${base}assets/exploration/lamber/tilesets/trees.json`);
+    this.load.atlas('ex-lamber-camps',
+      `${base}assets/exploration/lamber/tilesets/camps.png`,
+      `${base}assets/exploration/lamber/tilesets/camps.json`);
 
     // Tolère silencieusement les assets manquants
     this.load.on('loaderror', (file: { key: string; url: string }) => {
@@ -647,35 +654,29 @@ export class ExplorationScene extends Phaser.Scene {
     const seed = proc.seed ?? Math.floor(Math.random() * 1e9);
     const rng = mulberry32(seed);
 
-    // === Sol (tiles iso depuis ground.png) ===
-    const hasGroundTiles = this.textures.exists('ex-lamber-ground');
-    if (hasGroundTiles) {
-      this.ensureSpritesheet('ex-lamber-ground', proc.groundTileW, proc.groundTileH);
-    }
+    // === Sol (atlas iso depuis ground.png + ground.json) ===
+    const hasGroundTiles = this.textures.exists('ex-lamber-ground')
+      && this.textures.get('ex-lamber-ground').frameTotal > 1;
+    const groundFrames = hasGroundTiles
+      ? this.textures.get('ex-lamber-ground').getFrameNames()
+      : [];
     const fallbackGround = [0x3a5a2a, 0x426a30, 0x4a6b2e, 0x5a7a36, 0x3e5826];
 
     for (let gy = 0; gy < rows; gy++) {
       for (let gx = 0; gx < cols; gx++) {
         const { x, y } = iso(gx, gy);
-        if (hasGroundTiles) {
-          const tex = this.textures.get('ex-lamber-ground');
-          const total = Math.max(1, tex.frameTotal - 1);
-          // Variabilité douce : pondère vers les premiers tiles (herbe) au centre,
-          // vers les derniers (rocaille) sur les bords.
+        if (hasGroundTiles && groundFrames.length > 0) {
+          const total = groundFrames.length;
           const distFromCenter = Math.max(
             Math.abs(gx - cols / 2) / (cols / 2),
             Math.abs(gy - rows / 2) / (rows / 2),
           );
-          const skew = Math.min(total - 1, Math.floor(rng() * total * 0.7 + distFromCenter * total * 0.3));
-          const sprite = this.add.sprite(x, y, 'ex-lamber-ground', skew);
-          // Origin (0.5, 0.5) : le centre du tile (où la diamond est centrée)
+          const skewIdx = Math.min(total - 1, Math.floor(rng() * total * 0.7 + distFromCenter * total * 0.3));
+          const frameName = groundFrames[skewIdx];
+          const sprite = this.add.sprite(x, y, 'ex-lamber-ground', frameName);
           sprite.setOrigin(0.5, 0.5);
-          // Scale pour que la diamond du tile fasse exactement isoW × isoH à l'écran.
-          // Le sprite source est groundTileW × groundTileH, mais la diamond qu'il
-          // contient occupe ~tout en largeur et ~2/3 en hauteur. On rescale
-          // proportionnellement pour matcher isoW à l'écran.
+          // Scale pour que la diamond (largeur de la frame) matche isoW
           sprite.setScale(isoW / proc.groundTileW);
-          // Depth : en iso, les tiles "plus loin" (gy + gx petit) sont derrière
           sprite.setDepth(y);
           this.proceduralGroup.push(sprite);
         } else {
@@ -693,12 +694,13 @@ export class ExplorationScene extends Phaser.Scene {
       }
     }
 
-    // === Arbres dispersés sur la grille iso ===
-    const hasTreeTiles = this.textures.exists('ex-lamber-trees');
-    if (hasTreeTiles) {
-      this.ensureSpritesheet('ex-lamber-trees', proc.treeTileW, proc.treeTileH);
-    }
-    const occupied = new Set<string>(); // cellules occupées (par camps ou arbres bordure)
+    // === Arbres dispersés sur la grille iso (atlas) ===
+    const hasTreeTiles = this.textures.exists('ex-lamber-trees')
+      && this.textures.get('ex-lamber-trees').frameTotal > 1;
+    const treeFrames = hasTreeTiles
+      ? this.textures.get('ex-lamber-trees').getFrameNames()
+      : [];
+    const occupied = new Set<string>();
     const isBorder = (gx: number, gy: number) =>
       gx < 2 || gy < 2 || gx >= cols - 2 || gy >= rows - 2;
 
@@ -727,15 +729,14 @@ export class ExplorationScene extends Phaser.Scene {
         // Léger jitter dans le losange pour casser la régularité
         const jx = (rng() - 0.5) * isoW * 0.3;
         const jy = (rng() - 0.5) * isoH * 0.3;
-        if (hasTreeTiles) {
-          const tex = this.textures.get('ex-lamber-trees');
-          const total = Math.max(1, tex.frameTotal - 1);
-          const frame = Math.floor(rng() * total);
-          const tr = this.add.sprite(x + jx, y + jy, 'ex-lamber-trees', frame);
-          // Origin : pied au centre-bas (les pieds collent à l'iso center)
+        if (hasTreeTiles && treeFrames.length > 0) {
+          const frameName = treeFrames[Math.floor(rng() * treeFrames.length)];
+          const tr = this.add.sprite(x + jx, y + jy, 'ex-lamber-trees', frameName);
           tr.setOrigin(0.5, 0.88);
-          // Scale : on veut que le tree fasse ~iso width de large
-          const baseScale = (isoW * 0.9) / proc.treeTileW;
+          // Scale : chaque tile a sa propre largeur (irrégulière). On scale
+          // pour matcher ~isoW × 1.1 selon la largeur de la frame source.
+          const frameW = tr.width || proc.treeTileW;
+          const baseScale = (isoW * 1.0) / Math.max(80, frameW);
           const variation = 0.85 + rng() * 0.3;
           tr.setScale(baseScale * variation);
           tr.setDepth(y + jy + 0.5);
@@ -760,10 +761,11 @@ export class ExplorationScene extends Phaser.Scene {
       { kind: 'gobelins',  label: '⚔️ Camp de gobelins',  icon: '🛖' },
       { kind: 'cultistes', label: '⚔️ Cultistes',          icon: '🕯️' },
     ];
-    const hasCampTiles = this.textures.exists('ex-lamber-camps');
-    if (hasCampTiles) {
-      this.ensureSpritesheet('ex-lamber-camps', proc.campTileW, proc.campTileH);
-    }
+    const hasCampTiles = this.textures.exists('ex-lamber-camps')
+      && this.textures.get('ex-lamber-camps').frameTotal > 1;
+    const campFrames = hasCampTiles
+      ? this.textures.get('ex-lamber-camps').getFrameNames()
+      : [];
 
     // Placement sur grille iso avec espacement minimum (en cellules)
     const placedCamps: { gx: number; gy: number }[] = [];
@@ -792,13 +794,12 @@ export class ExplorationScene extends Phaser.Scene {
       }
 
       // Visuel du camp
-      if (hasCampTiles) {
-        const tex = this.textures.get('ex-lamber-camps');
-        const total = Math.max(1, tex.frameTotal - 1);
-        const frame = Math.floor(rng() * total);
-        const camp = this.add.sprite(x, y, 'ex-lamber-camps', frame);
+      if (hasCampTiles && campFrames.length > 0) {
+        const frameName = campFrames[Math.floor(rng() * campFrames.length)];
+        const camp = this.add.sprite(x, y, 'ex-lamber-camps', frameName);
         camp.setOrigin(0.5, 0.85);
-        camp.setScale(isoW / proc.campTileW);
+        const frameW = camp.width || proc.campTileW;
+        camp.setScale((isoW * 1.2) / Math.max(80, frameW));
         camp.setDepth(y + 0.7);
         this.proceduralGroup.push(camp);
       } else {
@@ -850,26 +851,6 @@ export class ExplorationScene extends Phaser.Scene {
     // dans la map). Future amélioration : collisions par tile.
   }
 
-  // Si la texture est chargée comme image plate, on la re-déclare comme spritesheet
-  // avec la taille de tile donnée. Idempotent.
-  private ensureSpritesheet(key: string, frameWidth: number, frameHeight: number) {
-    const tex = this.textures.get(key);
-    // Si déjà spritesheet (frameTotal > 1), on ne refait pas
-    if (tex.frameTotal > 1) return;
-    const src = tex.getSourceImage() as HTMLImageElement;
-    const w = src.width;
-    const h = src.height;
-    // On enlève la texture image et on la recharge en spritesheet à partir du même src
-    this.textures.remove(key);
-    this.textures.addSpriteSheet(key, src as any, {
-      frameWidth, frameHeight,
-      margin: 0, spacing: 0,
-      endFrame: -1,
-      // dimensions calculées auto par Phaser à partir de src + frameW/H
-    } as any);
-    // (w*h utilisés implicitement par Phaser pour calculer les frames)
-    void w; void h;
-  }
 }
 
 // PRNG seedable simple (Mulberry32)
