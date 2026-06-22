@@ -4,9 +4,17 @@ interface Props {
   onStart: () => void;
 }
 
+// URL de l'image de fond du title screen.
+// Pour la personnaliser : upload `public/assets/title.jpg`.
+// Si absente, le fond dégradé sombre par défaut s'affiche.
+const TITLE_BG_URL = `${import.meta.env.BASE_URL}assets/title.jpg`;
+
 export function StartScreen({ onStart }: Props) {
   return (
-    <div className="start-screen">
+    <div
+      className="start-screen"
+      style={{ '--title-bg': `url('${TITLE_BG_URL}')` } as React.CSSProperties}
+    >
       <div className="start-vignette" aria-hidden />
       <div className="start-card">
         <div className="start-sigil">📚</div>

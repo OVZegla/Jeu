@@ -13,7 +13,7 @@ export function ExplorationScreen({ onEngage }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<ExplorationScene | null>(null);
-  const [mapId, setMapId] = useState<MapId>('bureau');
+  const [mapId, setMapId] = useState<MapId>('ramees');
   const [entrySide, setEntrySide] = useState<ExitSide | null>(null);
   const [promptLabel, setPromptLabel] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -32,7 +32,7 @@ export function ExplorationScreen({ onEngage }: Props) {
         setEntrySide(fromSide ?? null);
         setMapId(toMapId);
       },
-    });
+    }, mapId);  // mapId initial passé à la scène (sinon elle reste sur le défaut)
     sceneRef.current = scene;
 
     const game = new Phaser.Game({
