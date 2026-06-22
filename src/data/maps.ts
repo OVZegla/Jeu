@@ -99,13 +99,25 @@ export const LAMBER_MAP: ExplorationMapConfig = {
     // Les camps sont injectés dynamiquement par la scène lors de la génération
   ],
   ambianceColor: 0x081a0c,
-  playerScale: 0.85,
+  playerScale: 0.75,
   procedural: {
     type: 'forest',
-    worldW: 1800,
-    worldH: 1400,
-    tileSize: 48,
-    treeDensity: 0.18,
+    gridCols: 18,
+    gridRows: 18,
+    // Tailles des tiles dans les spritesheets (1448×1086) :
+    // - ground = 8 cols × 8 rows
+    // - trees  = 10 cols × 7 rows
+    // - camps  = 8 cols × 6 rows
+    groundTileW: 181,
+    groundTileH: 135,
+    treeTileW: 145,
+    treeTileH: 155,
+    campTileW: 181,
+    campTileH: 181,
+    // Projection iso : diamond largeur 128 × hauteur 64 sur l'écran
+    isoTileW: 128,
+    isoTileH: 64,
+    treeDensity: 0.22,
     campCount: 3,
   },
 };

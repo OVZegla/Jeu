@@ -167,12 +167,22 @@ export interface ExplorationMapConfig {
 // Configuration de génération procédurale (Lamber etc.)
 export interface ProceduralConfig {
   type: 'forest';
-  worldW: number;             // taille de la map générée (px)
-  worldH: number;
-  tileSize: number;           // taille d'une tuile de sol (px)
-  treeDensity: number;        // 0..1 — probabilité d'un arbre par cellule
-  campCount: number;          // nombre de camps à placer
-  seed?: number;              // pour la reproductibilité (optionnel)
+  // Grille logique : nombre de cellules en x et y dans le monde iso
+  gridCols: number;
+  gridRows: number;
+  // Dimensions des tiles dans les spritesheets (pour le slicing)
+  groundTileW: number;
+  groundTileH: number;
+  treeTileW: number;
+  treeTileH: number;
+  campTileW: number;
+  campTileH: number;
+  // Dimensions iso (la projection : diamond width × height à l'écran)
+  isoTileW: number;        // largeur effective d'une cellule iso
+  isoTileH: number;        // hauteur effective (typique = isoTileW / 2)
+  treeDensity: number;     // 0..1 — probabilité d'un arbre par cellule
+  campCount: number;
+  seed?: number;
 }
 
 export interface PendingTargetSelection {
