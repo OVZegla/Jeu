@@ -1,68 +1,72 @@
-# 🌲 Forêt de Lamber — système d'écrans à la Dofus
+# 🌲 Forêt de Lamber — grille d'écrans coordonnés
 
-Plus de génération procédurale : chaque écran de la forêt est une map
-statique. Tu uploads une image par écran, on les connecte avec des
-sorties Nord/Sud/Est/Ouest, et le joueur transite automatiquement quand
-il touche un bord.
+Chaque écran de la forêt a des **coordonnées (x, y)** sur une grille. Les
+voisins sont **automatiquement connectés** par des sorties N/S/E/W : si
+l'écran (1,1) existe et (2,1) existe, alors marcher vers l'est sur (1,1)
+téléporte sur (2,1), et vice-versa.
 
-## 📂 Structure
+## 📂 Convention de nommage des images
+
+Dépose tes images dans `public/assets/exploration/lamber/` avec le format
+**`X-Y.jpg`** (ou `.png`) où X est la colonne et Y la ligne :
 
 ```
 exploration/lamber/
-├── map.jpg           ← écran principal (entrée de la forêt)
-├── tilesets/         ← LEGACY (ancienne génération procédurale, non utilisé)
+├── 1-1.jpg       ← écran d'entrée (où arrive le téléport depuis Ramees)
+├── 2-1.jpg       ← écran à l'EST de (1,1)
+├── 0-1.jpg       ← écran à l'OUEST de (1,1)
+├── 1-2.jpg       ← écran au SUD de (1,1)
+├── 1-0.jpg       ← écran au NORD de (1,1)
+├── 2-2.jpg       ← écran au SUD-EST de (1,1)
+└── ...
 ```
 
-## 📝 Pour ajouter de nouveaux écrans
+**Y croît vers le bas** (comme les pixels d'écran) :
+- `(1, 1)` → entrée
+- `(1, 0)` → au nord (Y plus petit)
+- `(1, 2)` → au sud (Y plus grand)
+- `(0, 1)` → à l'ouest
+- `(2, 1)` → à l'est
 
-1. Uploade ton image dans `public/assets/exploration/lamber/` (ex: `north.jpg`)
-2. Ajoute le MapId dans `src/game/types.ts` :
+## 📝 Comment ajouter un nouvel écran
+
+1. **Uploade ton image** dans ce dossier avec le bon nom (ex: `2-1.jpg`)
+2. **Dis-moi les coords** (ex: "j'ai mis 2-1") OU édite toi-même `src/data/maps.ts` :
    ```ts
-   export type MapId = 'bureau' | 'ramees' | 'lamber' | 'lamber-north';
+   const LAMBER_SCREENS: LamberScreen[] = [
+     { x: 1, y: 1, name: 'Entrée', interactables: [...] },
+     { x: 2, y: 1, name: 'Clairière Est' }, // ← nouveau
+   ];
    ```
-3. Ajoute la map dans `src/data/maps.ts` :
-   ```ts
-   export const LAMBER_NORTH_MAP: ExplorationMapConfig = {
-     id: 'lamber-north',
-     name: 'Forêt de Lamber — Nord',
-     imageKey: 'ex-map-lamber-north',
-     imagePath: 'assets/exploration/lamber/north.jpg',
-     spawn: { x: 0.50, y: 0.80 },
-     interactables: [],
-     exits: {
-       south: { toMapId: 'lamber' },     // retour à l'entrée
-       // north: { toMapId: 'lamber-north-2' },  // pour aller encore plus loin
-     },
-   };
-   ```
-4. Ajoute aussi la sortie depuis l'écran courant dans son entrée MAPS :
-   ```ts
-   LAMBER_MAP.exits = {
-     north: { toMapId: 'lamber-north' },
-   };
-   ```
-5. Charge le PNG dans `ExplorationScene.preload()` :
-   ```ts
-   this.load.image('ex-map-lamber-north', `${base}assets/exploration/lamber/north.jpg`);
-   ```
+3. C'est tout. Les exits N/S/E/W avec les voisins existants sont
+   **calculés automatiquement**. Les images sont préchargées automatiquement.
 
 ## 🎮 Comportement
 
-- Joueur touche le **bord nord** d'une map qui a `exits.north` défini →
-  fade out + transition vers la map cible
-- Sur la nouvelle map, le joueur **apparaît au côté opposé** (entré par
-  le nord → apparaît en bas / sud de la nouvelle map)
-- Si pas de sortie sur ce bord, le joueur est bloqué par le bord visible
+- Le joueur touche le **bord est** d'un écran avec voisin (x+1, y) → fade out
+- Il apparaît au **bord ouest** de l'écran (x+1, y)
+- Pareil pour N/S/W
+- Si pas de voisin sur ce bord, le joueur est bloqué par les bornes du monde
 
-## 🪨 Téléports (existants)
+## 🪨 Téléports longue distance
 
-Les summon stones continuent de marcher en plus du système N/S/E/W,
-pour les voyages longue distance entre zones :
-- Stone de Lamber → retour à Ramees (en bas de la map)
-- Stone de Ramees → vers le Bureau et vers Lamber
+Les summon stones continuent de marcher pour les voyages entre zones :
+- Ramees → Lamber (`lamber-1-1`)
+- Lamber `(1,1)` → Ramees (sur l'écran d'entrée)
+
+Tu peux ajouter d'autres interactables sur n'importe quel écran via le
+champ `interactables` du `LamberScreen` correspondant.
+
+## ⚙️ Personnaliser un écran
+
+Optionnels par écran dans `LAMBER_SCREENS` :
+- `name`: nom affiché dans la top-bar
+- `interactables`: array d'interactables (téléports, NPCs, etc.)
+- `walkable`: zones marchables (rectangles 0..1) si tu veux limiter le
+  joueur à des chemins. Sans `walkable`, il peut marcher partout dans la
+  map.
 
 ## ⚠️ Note
 
-Le dossier `tilesets/` (ground.png, trees.png, camps.png + JSON) reste
-dans le repo mais n'est plus utilisé. Tu peux le supprimer si tu veux
-gagner de la place (~6 MB) ou le garder au cas où.
+Le dossier `tilesets/` (ancienne génération procédurale) est LEGACY et
+plus utilisé. Tu peux le supprimer si tu veux gagner ~6 MB.

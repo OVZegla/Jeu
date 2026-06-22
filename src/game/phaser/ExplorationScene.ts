@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { ExitSide, Interactable, MapId, WalkableRect } from '../types';
-import { getMap } from '../../data/maps';
+import { getAllMapImagesToPreload, getMap } from '../../data/maps';
 
 type Dir = 'front' | 'back' | 'left' | 'right';
 
@@ -85,10 +85,11 @@ export class ExplorationScene extends Phaser.Scene {
 
   preload() {
     const base = import.meta.env.BASE_URL || '/';
-    // Maps statiques (1 image par écran)
-    this.load.image('ex-map-bureau', `${base}assets/exploration/bureau/map.jpg`);
-    this.load.image('ex-map-ramees', `${base}assets/exploration/ramees/map.jpg`);
-    this.load.image('ex-map-lamber', `${base}assets/exploration/lamber/map.jpg`);
+    // Maps statiques : on précharge dynamiquement chaque écran déclaré
+    // dans data/maps.ts (1 image par écran).
+    for (const img of getAllMapImagesToPreload()) {
+      this.load.image(img.key, `${base}${img.path}`);
+    }
 
     // Sprites entités
     this.load.image('ex-boss-bureau', `${base}assets/exploration/bureau/boss.png`);

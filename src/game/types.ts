@@ -120,7 +120,10 @@ export type GamePhase =
 
 // === Exploration (scènes pré-combat) ===
 
-export type MapId = 'bureau' | 'ramees' | 'lamber';
+// Identifiant de map. Format libre. Conventions :
+// - 'bureau', 'ramees' pour les maps uniques
+// - 'lamber-1-1', 'lamber-2-1' pour les écrans d'une zone grille (x-y)
+export type MapId = string;
 
 export type Interactable =
   | {

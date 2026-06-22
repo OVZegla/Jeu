@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { ExplorationScene } from '../game/phaser/ExplorationScene';
 import type { ExitSide, MapId } from '../game/types';
-import { getMap } from '../data/maps';
+import { getMap, LAMBER_ENTRY_ID } from '../data/maps';
 import './ExplorationScreen.css';
 
 interface Props {
@@ -161,11 +161,11 @@ export function ExplorationScreen({ onEngage }: Props) {
                   >📚 Retour au Bureau</button>
                 </li>
               )}
-              {mapId !== 'lamber' && (
+              {!mapId.startsWith('lamber-') && (
                 <li>
                   <button
                     className="ex-menu-item"
-                    onClick={() => handleTeleport('lamber')}
+                    onClick={() => handleTeleport(LAMBER_ENTRY_ID)}
                     title="(debug : accès direct)"
                   >🌲 Forêt de Lamber</button>
                 </li>
