@@ -1,10 +1,31 @@
 # Le Bureau des Archives Infinies
 
-Boss fight tour par tour en **React + TypeScript + Vite**, dans une ambiance
-dark fantasy bureaucratique. Trois héros affrontent **le Champion des
-Collectivités Territoriales** au cœur d'une bibliothèque administrative maudite.
+RPG tour par tour **2.5D pixel art** en **React + TypeScript + Vite + Phaser 4**,
+dans une ambiance dark fantasy bureaucratique. Trois héros explorent **les
+Archives Infinies** et affrontent **le Champion des Collectivités Territoriales**
+au cœur d'une bibliothèque administrative maudite.
 
 > 100 % code original. Aucune ressource issue de licences existantes.
+
+## Refonte V2 (vertical slice des Archives)
+
+- **Exploration 2.5D** : marche animée par frames, ombres ancrées au sol,
+  perspective, rais de lumière volumétriques, poussière, ennemis visibles en
+  patrouille (aggro), documents de lore, coffres, secrets, porte scellée,
+  point de sauvegarde.
+- **Combat tour par tour V2** : initiative par vitesse, multi-ennemis,
+  faiblesses/résistances élémentaires, objets, statuts, critiques, XP/niveaux.
+  Les dégâts s'affichent au moment de l'impact visuel (séquenceur d'événements).
+- **Boss mis en scène** : dialogue d'intro, 3 phases, invocation de Pages
+  protectrices (bouclier), attaque ultime télégraphiée à contrer avec Garde,
+  dialogue de fin et écran de conclusion.
+- **Sauvegarde** localStorage (auto après victoire + save points + menu).
+- Docs : `docs/AUDIT.md`, `docs/PLAN_REFONTE.md`, `docs/ASSETS.md`.
+- Test moteur : `npx tsx scripts/test-combat-engine.ts`.
+
+L'ancien moteur V1 (`src/game/combatEngine.ts` et les composants `Battle*` V1)
+reste dans le repo à titre de référence tant que Ramees / Lamber ne sont pas
+migrées — voir « Étape 5 » du plan.
 
 ## Installation et lancement
 

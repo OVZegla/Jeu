@@ -59,9 +59,13 @@ function championDecision(state: BattleState, boss: EnemyCombatant): AiDecision 
     return { skillId: rt.telegraphSkillId, targetId: null };
   }
 
-  // Phase 2 : invoque les Pages protectrices (une seule fois par vague).
+  // Phase 2 : invoque les Pages protectrices (une seule fois par vague,
+  // et seulement si la compétence est réellement disponible).
   const pagesAlive = state.enemies.some((e) => e.alive && e.enemyId === 'page');
-  if (rt.phase >= 2 && rt.summonsDone === 0 && !pagesAlive) {
+  if (
+    rt.phase >= 2 && rt.summonsDone === 0 && !pagesAlive &&
+    (boss.cooldowns['pagesProtectrices'] || 0) <= 0
+  ) {
     return { skillId: 'pagesProtectrices', targetId: null };
   }
 

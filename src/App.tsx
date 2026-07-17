@@ -47,9 +47,15 @@ export default function App() {
     () => typeof window !== 'undefined' && localStorage.getItem('jeu-muted') === '1'
   );
 
-  // Ref toujours à jour pour la sauvegarde (évite les states périmés)
+  // Ref toujours à jour pour la sauvegarde (évite les states périmés).
+  // Toute mutation du run passe par updateRun pour garder la ref synchrone
+  // (ex : repos au save point = soin PUIS sauvegarde dans le même handler).
   const runRef = useRef(run);
   runRef.current = run;
+  const updateRun = useCallback((patch: (r: RunState) => RunState) => {
+    runRef.current = patch(runRef.current);
+    setRun(runRef.current);
+  }, []);
 
   useEffect(() => {
     setSfxMuted(muted);
@@ -109,48 +115,46 @@ export default function App() {
       return;
     }
 
-    setRun((r) => {
-      // PV/MP des héros après combat (les KO reviennent à 1 PV, JRPG-style)
-      let party: HeroState[] = r.party.map((h) => {
-        const fighter = result.heroes.find((f) => f.heroId === h.heroId);
-        if (!fighter) return h;
-        return { ...h, hp: Math.max(1, fighter.hp), mp: fighter.mp };
-      });
-
-      // XP + niveaux
-      const { party: leveled, levelUps } = applyXp(party, result.xpGained);
-      party = leveled;
-      if (levelUps.length > 0) {
-        playSfx('levelup');
-        showNotice(
-          '⬆ ' + levelUps.map((l) => `${HERO_DEFS[l.heroId].name} passe Nv ${l.newLevel} !`).join(' — ')
-        );
-      }
-
-      // Inventaire : état post-combat + butin
-      const inventory = { ...result.inventory };
-      for (const d of result.drops) {
-        inventory[d.itemId] = (inventory[d.itemId] || 0) + d.count;
-      }
-
-      // Progression
-      const flags: GameFlags = {
-        ...r.flags,
-        defeatedGroups: [...r.flags.defeatedGroups, req.interactableId],
-        bossDefeated: r.flags.bossDefeated || req.isBoss,
-      };
-
-      const next: RunState = { ...r, party, inventory, flags };
-      // Sauvegarde automatique après chaque victoire.
-      saveGame({ mapId: next.mapId, party, inventory, flags });
-      return next;
+    const r = runRef.current;
+    // PV/MP des héros après combat (les KO reviennent à 1 PV, JRPG-style)
+    let party: HeroState[] = r.party.map((h) => {
+      const fighter = result.heroes.find((f) => f.heroId === h.heroId);
+      if (!fighter) return h;
+      return { ...h, hp: Math.max(1, fighter.hp), mp: fighter.mp };
     });
+
+    // XP + niveaux
+    const { party: leveled, levelUps } = applyXp(party, result.xpGained);
+    party = leveled;
+    if (levelUps.length > 0) {
+      playSfx('levelup');
+      showNotice(
+        '⬆ ' + levelUps.map((l) => `${HERO_DEFS[l.heroId].name} passe Nv ${l.newLevel} !`).join(' — ')
+      );
+    }
+
+    // Inventaire : état post-combat + butin
+    const inventory = { ...result.inventory };
+    for (const d of result.drops) {
+      inventory[d.itemId] = (inventory[d.itemId] || 0) + d.count;
+    }
+
+    // Progression
+    const flags: GameFlags = {
+      ...r.flags,
+      defeatedGroups: [...r.flags.defeatedGroups, req.interactableId],
+      bossDefeated: r.flags.bossDefeated || req.isBoss,
+    };
+
+    updateRun((cur) => ({ ...cur, party, inventory, flags }));
+    // Sauvegarde automatique après chaque victoire.
+    saveGame({ mapId: r.mapId, party, inventory, flags });
 
     if (req.isBoss && req.outroDialogueId) {
       setPendingDialogueId(req.outroDialogueId);
     }
     setScreen('exploration');
-  }, [battle, showNotice]);
+  }, [battle, showNotice, updateRun]);
 
   // Fin du dialogue d'après-boss → écran de fin
   const handlePendingDialogueDone = useCallback(() => {
@@ -220,10 +224,10 @@ export default function App() {
         spawnOverride={null}
         pendingDialogueId={pendingDialogueId}
         muted={muted}
-        onMapChange={(mapId) => setRun((r) => ({ ...r, mapId }))}
-        onPartyChange={(party) => setRun((r) => ({ ...r, party }))}
-        onInventoryChange={(inventory) => setRun((r) => ({ ...r, inventory }))}
-        onFlagsChange={(flags) => setRun((r) => ({ ...r, flags }))}
+        onMapChange={(mapId) => updateRun((r) => ({ ...r, mapId }))}
+        onPartyChange={(party) => updateRun((r) => ({ ...r, party }))}
+        onInventoryChange={(inventory) => updateRun((r) => ({ ...r, inventory }))}
+        onFlagsChange={(flags) => updateRun((r) => ({ ...r, flags }))}
         onStartBattle={(req) => handleStartBattle(req)}
         onSaveGame={handleSave}
         onPendingDialogueDone={handlePendingDialogueDone}

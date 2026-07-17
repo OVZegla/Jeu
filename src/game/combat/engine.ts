@@ -190,8 +190,9 @@ function dealDamage(
     }
     if (state.boss.phase < 3 && pct <= BALANCE2.boss2.phase3Threshold) {
       state.boss.phase = 3;
-      // Nouvelle vague de pages possible en phase 3.
+      // Nouvelle vague de pages possible en phase 3 (cooldown réarmé).
       state.boss.summonsDone = 0;
+      delete target.cooldowns['pagesProtectrices'];
       events.push({
         t: 'bossPhase',
         phase: 3,

@@ -168,8 +168,8 @@ export class ExplorationSceneV2 extends Phaser.Scene {
       }
       this.moveTarget = { x: p.worldX, y: p.worldY };
     });
-    this.wasd.SPACE.on('down', () => this.interact());
-    this.wasd.ENTER.on('down', () => this.interact());
+    // NB : l'interaction clavier est pollée dans update() via JustDown
+    // (les événements 'down' des Key ne sont pas fiables selon le focus).
 
     // Prompt
     this.prompt = this.add.text(0, 0, '', {
@@ -809,6 +809,11 @@ export class ExplorationSceneV2 extends Phaser.Scene {
   update(_t: number, delta: number) {
     if (this.frozen || this.switching) return;
     const dt = delta / 1000;
+
+    // Interaction clavier (ESPACE / ENTRÉE) — pollée pour rester fiable.
+    if (Phaser.Input.Keyboard.JustDown(this.wasd.SPACE) || Phaser.Input.Keyboard.JustDown(this.wasd.ENTER)) {
+      this.interact();
+    }
 
     let vx = 0, vy = 0;
     const left = this.cursors.left?.isDown || this.wasd.A.isDown;
