@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - claude/gracious-fermi-gq30c2
+      - claude/rpg-3d-pixel-art-refactor-11fzlz
   pull_request:
   workflow_dispatch:
 
