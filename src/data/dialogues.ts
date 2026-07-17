@@ -167,6 +167,32 @@ export const DIALOGUES: Record<string, DialogueDef> = {
       { speaker: 'Clemodin', text: 'Le Champion ? CHUT ! Ne prononcez pas son nom ici ! La dernière fois, j\'ai reçu un redressement rétroactif sur trois vies antérieures.', color: '#8ad48a' },
     ],
   },
+  // ============================================================
+  // Forêt de Lamber — pancartes et curiosités
+  // ============================================================
+  'lamber-pancarte-cultistes': {
+    id: 'lamber-pancarte-cultistes',
+    lines: [
+      { speaker: '', text: '« CERCLE DU GRAND DORMEUR — réunion tous les soirs à la nouvelle lune. Tenue sombre exigée. Apportez votre propre cierge. Le Grand Dormeur vous entend (il ne répond pas, c\'est normal, il dort). »' },
+      { speaker: 'Zlatax', text: 'Une secte qui vénère quelqu\'un qui dort. Au moins leur dieu ne demande rien.', color: '#8e44ad' },
+    ],
+  },
+  'donjon-bandits-panneau': {
+    id: 'donjon-bandits-panneau',
+    lines: [
+      { speaker: '', text: '« REPAIRE SUPER SECRET DES BANDITS. Défense d\'entrer. SURTOUT les paladins. Les livraisons de butin, c\'est au fond à droite. — Le Balafré »' },
+      { speaker: 'Datpaloof', text: '…Ils ont mis un panneau. Avec une flèche.', color: '#e74c3c' },
+      { speaker: 'Baghaar', text: 'Le crime organisé, mais alors très moyennement organisé.', color: '#27ae60' },
+    ],
+  },
+  'donjon-gobelins-marmite': {
+    id: 'donjon-gobelins-marmite',
+    lines: [
+      { speaker: '', text: 'Une marmite de soupe verdâtre mijote. Quelque chose vous regarde depuis l\'intérieur de la marmite. Vous décidez de ne pas approfondir.' },
+      { speaker: 'Zlatax', text: 'J\'ai connu des démons moins inquiétants que cette soupe.', color: '#8e44ad' },
+    ],
+  },
+
   'npc-quenticast': {
     id: 'npc-quenticast',
     lines: [

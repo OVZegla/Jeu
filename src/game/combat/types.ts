@@ -110,6 +110,7 @@ export interface EnemyCombatant extends CombatantBase {
   ai: EnemyAiKind;
   xpReward: number;
   displayScale: number;   // taille relative dans l'arène
+  floats: boolean;        // lévite (documents animés) → flottement + mort en confettis
   title?: string;
 }
 

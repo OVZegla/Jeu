@@ -327,99 +327,136 @@ interface LamberScreen {
   exitIndicators?: Partial<Record<ExitSide, { x: number; y: number }>>;
 }
 
-// Camps : interactables réutilisables
-const BANDIT_CAMP = (id: string, x = 0.5, y = 0.5): Interactable => ({
-  type: 'boss',
-  id,
-  x, y,
-  spriteKey: '__placeholder__',
-  label: '⚔️ Camp de bandits',
-  engages: true,
-});
-const CULTIST_CAMP = (id: string, x = 0.5, y = 0.5): Interactable => ({
-  type: 'boss',
-  id,
-  x, y,
-  spriteKey: '__placeholder__',
-  label: '⚔️ Camp de cultistes',
-  engages: true,
-});
-const GOBLIN_GUARDS = (id: string, x = 0.5, y = 0.5): Interactable => ({
-  type: 'boss',
-  id,
-  x, y,
-  spriteKey: '__placeholder__',
-  label: '⚔️ Gardes gobelins',
-  engages: true,
-});
-const GOBLIN_CAMP = (id: string, x = 0.5, y = 0.5): Interactable => ({
-  type: 'boss',
-  id,
-  x, y,
-  spriteKey: '__placeholder__',
-  label: '⚔️ Camp de gobelins',
-  engages: true,
-});
-const DUNGEON_ENTRANCE = (id: string, label: string, x = 0.5, y = 0.4): Interactable => ({
-  type: 'boss',
-  id,
-  x, y,
-  spriteKey: '__placeholder__',
-  label,
-  engages: true,  // pour l'instant ça lance aussi un combat — donjon à venir
+// Groupe d'ennemis visible en patrouille (humanoïdes de la forêt)
+const CAMP = (
+  id: string, groupId: string, label: string, spriteKey: string,
+  x: number, y: number, aggro = 80
+): Interactable => ({
+  type: 'battle',
+  id, x, y,
+  spriteKey,
+  label: `⚔️ ${label}`,
+  groupId,
+  patrol: { dx: 0.05, dy: 0.02, ms: 2600 },
+  aggroRadius: aggro,
+  grounded: true,
 });
 
 const LAMBER_SCREENS: LamberScreen[] = [
   {
     x: 1, y: 1,
     name: 'Entrée',
+    // Camp de bandits au NORD-OUEST, routes en Y au centre
     interactables: [
-      BANDIT_CAMP('lamber-1-1-bandits', 0.55, 0.55),
+      CAMP('lamber-1-1-bandits', 'lamber-bandits-entree', 'Bandits pas discrets', 'enemy-bandit', 0.24, 0.26),
+    ],
+    walkable: [
+      { x: 0.28, y: 0.30, w: 0.30, h: 0.65 },   // route sud → centre
+      { x: 0.08, y: 0.40, w: 0.86, h: 0.22 },   // traverse est-ouest
+      { x: 0.06, y: 0.08, w: 0.36, h: 0.36 },   // clairière du camp
     ],
   },
   {
     x: 1, y: 2,
     name: 'Sentier des bandits',
+    // Lac à l'OUEST (infranchissable), camp à l'EST du carrefour
     interactables: [
-      BANDIT_CAMP('lamber-1-2-bandits', 0.50, 0.50),
+      CAMP('lamber-1-2-bandits', 'lamber-bandits-sentier', 'Embuscade de bandits', 'enemy-bandit', 0.64, 0.24),
+    ],
+    walkable: [
+      { x: 0.42, y: 0.04, w: 0.20, h: 0.92 },   // route nord-sud
+      { x: 0.30, y: 0.40, w: 0.68, h: 0.20 },   // route est
+      { x: 0.02, y: 0.58, w: 0.44, h: 0.18 },   // route ouest (sous le lac)
+      { x: 0.52, y: 0.08, w: 0.28, h: 0.36 },   // clairière du camp
     ],
   },
   {
     x: 1, y: 3,
     name: 'Sentier sud',
+    // Rivière à l'OUEST, route nord-sud à l'est
+    walkable: [
+      { x: 0.48, y: 0.04, w: 0.20, h: 0.92 },
+      { x: 0.30, y: 0.42, w: 0.60, h: 0.20 },
+    ],
   },
   {
     x: 1, y: 4,
     name: 'Autel des cultistes',
+    // Enclos rituel à l'EST — le combat se déclenche à la cérémonie
     interactables: [
-      CULTIST_CAMP('lamber-1-4-cultistes', 0.50, 0.50),
+      CAMP('lamber-1-4-cultistes', 'lamber-cultistes-autel', 'Cérémonie du Grand Dormeur', 'enemy-hierophante', 0.72, 0.32, 90),
+      {
+        type: 'document',
+        id: 'lamber-autel-pancarte',
+        x: 0.60, y: 0.58,
+        label: '🪧 Pancarte des cultistes',
+        dialogueId: 'lamber-pancarte-cultistes',
+      },
+    ],
+    walkable: [
+      { x: 0.44, y: 0.04, w: 0.20, h: 0.60 },   // route depuis le nord
+      { x: 0.20, y: 0.52, w: 0.60, h: 0.20 },   // traverse
+      { x: 0.56, y: 0.14, w: 0.34, h: 0.52 },   // intérieur de l'enclos
     ],
   },
   {
     x: 2, y: 2,
     name: 'Sentier est',
+    walkable: [
+      { x: 0.02, y: 0.42, w: 0.96, h: 0.22 },
+      { x: 0.36, y: 0.10, w: 0.22, h: 0.50 },
+    ],
   },
   {
     x: 3, y: 2,
     name: 'Antre des bandits',
+    // Entrée de grotte au centre, gardée
     interactables: [
-      DUNGEON_ENTRANCE('lamber-3-2-dungeon-bandits', '🚪 Entrée du donjon des bandits', 0.50, 0.40),
+      CAMP('lamber-3-2-gardes', 'donjon-bandits-garde', 'Bandits de garde', 'enemy-bandit', 0.42, 0.56, 75),
+      {
+        type: 'door',
+        id: 'lamber-3-2-donjon',
+        x: 0.615, y: 0.475,
+        label: '🕳 Entrer dans le repaire des bandits',
+        toMapId: 'donjon-bandits',
+      },
+    ],
+    walkable: [
+      { x: 0.02, y: 0.44, w: 0.70, h: 0.22 },
+      { x: 0.36, y: 0.36, w: 0.34, h: 0.30 },
     ],
   },
   {
     x: 0, y: 2,
     name: 'Garde gobelin',
     interactables: [
-      GOBLIN_GUARDS('lamber-0-2-goblins', 0.55, 0.55),
+      CAMP('lamber-0-2-gardes', 'lamber-gobelins-garde', 'Gardes gobelins (ils dorment debout)', 'enemy-gobelin', 0.52, 0.48, 75),
+    ],
+    walkable: [
+      { x: 0.02, y: 0.42, w: 0.96, h: 0.22 },
+      { x: 0.44, y: 0.14, w: 0.22, h: 0.44 },
     ],
   },
   {
     x: -1, y: 2,
     name: 'Repaire gobelin',
+    // Forteresse d'os à l'EST, bouche de grotte en haut de l'enceinte
     interactables: [
-      GOBLIN_CAMP('lamber-m1-2-goblins-camp', 0.40, 0.55),
-      DUNGEON_ENTRANCE('lamber-m1-2-dungeon-goblins', '🚪 Entrée du donjon gobelin', 0.65, 0.40),
+      CAMP('lamber-m1-2-camp', 'lamber-gobelins-camp', 'Camp gobelin', 'enemy-gobelin', 0.46, 0.52, 85),
+      {
+        type: 'door',
+        id: 'lamber-m1-2-donjon',
+        x: 0.525, y: 0.295,
+        label: '🕳 Entrer dans l\'antre des gobelins',
+        toMapId: 'donjon-gobelins',
+      },
     ],
+    walkable: [
+      { x: 0.30, y: 0.40, w: 0.68, h: 0.24 },
+      { x: 0.38, y: 0.24, w: 0.30, h: 0.30 },
+      { x: 0.60, y: 0.10, w: 0.30, h: 0.30 },
+    ],
+    exitIndicators: { east: { x: 0.97, y: 0.52 } },
   },
 ];
 
@@ -490,6 +527,156 @@ function generateLamberMaps(): Record<string, ExplorationMapConfig> {
 }
 
 const LAMBER_MAPS = generateLamberMaps();
+
+// ============================================================
+// DONJONS de la Forêt de Lamber
+// ============================================================
+
+const DONJON_BANDITS: ExplorationMapConfig = {
+  id: 'donjon-bandits',
+  name: 'Repaire des bandits',
+  imageKey: 'ex-map-donjon-bandits',
+  imagePath: 'assets/exploration/donjons/repaire-bandits.jpg',
+  spawn: { x: 0.50, y: 0.86 },
+  ambianceColor: 0x140c08,
+  depthScale: { top: 0.85, bottom: 1.05 },
+  lights: [
+    { x: 0.135, y: 0.24, r: 45, color: 0xff9944 },  // torches
+    { x: 0.50, y: 0.24, r: 45, color: 0xff9944 },
+    { x: 0.87, y: 0.24, r: 45, color: 0xff9944 },
+    { x: 0.53, y: 0.72, r: 55, color: 0xffaa55 },   // feu de camp
+  ],
+  interactables: [
+    {
+      type: 'battle',
+      id: 'donjon-bandits-fight-1',
+      x: 0.33, y: 0.52,
+      spriteKey: 'enemy-bandit',
+      label: '⚔️ Bandits de garde',
+      groupId: 'donjon-bandits-garde',
+      patrol: { dx: 0.06, dy: 0.02, ms: 2400 },
+      aggroRadius: 85,
+      grounded: true,
+    },
+    {
+      type: 'battle',
+      id: 'donjon-bandits-chef',
+      x: 0.72, y: 0.46,
+      spriteKey: 'enemy-banditChef',
+      label: '⚔️ Le Balafré, chef des bandits',
+      groupId: 'donjon-bandits-chef',
+      patrol: { dx: 0.03, dy: 0.02, ms: 3200 },
+      aggroRadius: 70,
+      grounded: true,
+    },
+    {
+      type: 'document',
+      id: 'donjon-bandits-panneau',
+      x: 0.575, y: 0.38,
+      label: '🪧 Panneau du repaire',
+      dialogueId: 'donjon-bandits-panneau',
+    },
+    {
+      type: 'chest',
+      id: 'donjon-bandits-butin',
+      x: 0.84, y: 0.50,
+      label: '💰 Butin des bandits',
+      items: [
+        { itemId: 'encreBenite', count: 1 },
+        { itemId: 'cafeDuGreffier', count: 2 },
+      ],
+    },
+  ],
+  walkable: [
+    { x: 0.06, y: 0.34, w: 0.88, h: 0.56 },
+    { x: 0.42, y: 0.80, w: 0.16, h: 0.20 },
+  ],
+  playerScale: 0.85,
+  exits: {
+    south: {
+      toMapId: 'lamber-3-2',
+      entryX: 0.615,
+      entryY: 0.52,
+      indicatorX: 0.50,
+      indicatorY: 0.965,
+    },
+  },
+};
+
+const DONJON_GOBELINS: ExplorationMapConfig = {
+  id: 'donjon-gobelins',
+  name: 'Antre des gobelins',
+  imageKey: 'ex-map-donjon-gobelins',
+  imagePath: 'assets/exploration/donjons/antre-gobelins.jpg',
+  spawn: { x: 0.50, y: 0.86 },
+  ambianceColor: 0x0c1408,
+  depthScale: { top: 0.85, bottom: 1.05 },
+  lights: [
+    { x: 0.10, y: 0.24, r: 45, color: 0xff9944 },
+    { x: 0.90, y: 0.24, r: 45, color: 0xff9944 },
+    { x: 0.52, y: 0.52, r: 55, color: 0xffaa55 },   // feu sous la marmite
+  ],
+  interactables: [
+    {
+      type: 'battle',
+      id: 'donjon-gobelins-fight-1',
+      x: 0.30, y: 0.58,
+      spriteKey: 'enemy-gobelin',
+      label: '⚔️ Meute de gobelins',
+      groupId: 'donjon-gobelins-garde',
+      patrol: { dx: 0.07, dy: 0.03, ms: 2000 },
+      aggroRadius: 90,
+      grounded: true,
+    },
+    {
+      type: 'battle',
+      id: 'donjon-gobelins-roi',
+      x: 0.72, y: 0.44,
+      spriteKey: 'enemy-roiGobelin',
+      label: '⚔️ Sa Majesté Grokk Ier',
+      groupId: 'donjon-gobelins-roi',
+      patrol: { dx: 0.02, dy: 0.02, ms: 3600 },
+      aggroRadius: 70,
+      grounded: true,
+    },
+    {
+      type: 'document',
+      id: 'donjon-gobelins-marmite',
+      x: 0.52, y: 0.50,
+      label: '🍲 La marmite douteuse',
+      dialogueId: 'donjon-gobelins-marmite',
+    },
+    {
+      type: 'chest',
+      id: 'donjon-gobelins-tresor',
+      x: 0.72, y: 0.56,
+      label: '👑 Trésor royal (des bricoles)',
+      items: [
+        { itemId: 'dossierDeSoin', count: 3 },
+        { itemId: 'formulaireA38', count: 1 },
+      ],
+    },
+  ],
+  walkable: [
+    { x: 0.06, y: 0.34, w: 0.88, h: 0.56 },
+    { x: 0.42, y: 0.80, w: 0.16, h: 0.20 },
+  ],
+  playerScale: 0.85,
+  exits: {
+    south: {
+      toMapId: 'lamber--1-2',
+      entryX: 0.525,
+      entryY: 0.33,
+      indicatorX: 0.50,
+      indicatorY: 0.965,
+    },
+  },
+};
+
+export const DONJON_MAPS: Record<string, ExplorationMapConfig> = {
+  'donjon-bandits': DONJON_BANDITS,
+  'donjon-gobelins': DONJON_GOBELINS,
+};
 
 // ============================================================
 // LES ARCHIVES INFINIES — zone prioritaire de la refonte (vertical slice).
@@ -789,6 +976,7 @@ export const MAPS: Record<string, ExplorationMapConfig> = {
   ...RAMEES_INTERIORS,
   ...ARCHIVES_MAPS,
   ...LAMBER_MAPS,
+  ...DONJON_MAPS,
 };
 
 export const LAMBER_ENTRY_ID: MapId = 'lamber-1-1';
@@ -806,6 +994,8 @@ export function getAllMapImagesToPreload(): Array<{ key: string; path: string }>
 export function getZoneName(id: string): string {
   if (id.startsWith('lamber-')) return 'Forêt de Lamber';
   if (id.startsWith('archives-')) return 'Les Archives Infinies';
+  if (id === 'donjon-bandits') return 'Repaire des bandits';
+  if (id === 'donjon-gobelins') return 'Antre des gobelins';
   if (id === 'bureau') return 'Bureau des Archives Infinies';
   if (id === 'ramees' || id.startsWith('ramees-')) return 'Ramees';
   return getMap(id).name;

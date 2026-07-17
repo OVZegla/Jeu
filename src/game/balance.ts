@@ -129,6 +129,40 @@ export const BALANCE2 = {
   // Attaque télégraphiée du boss (phase 3)
   archivageDefinitifTelegraphed: { power: 150 },
 
+  // === Factions de la Forêt de Lamber ===
+  factionEnemies: {
+    bandit:      { maxHp: 130, defense: 0.08, power: 0.95, speed: 11, xp: 50,
+                   weaknesses: ['foudre'], resistances: [] },          // armures volées → conductrices
+    banditChef:  { maxHp: 280, defense: 0.14, power: 1.15, speed: 12, xp: 170,
+                   weaknesses: ['foudre'], resistances: ['physique'] },
+    gobelin:     { maxHp: 95,  defense: 0.04, power: 0.85, speed: 9,  xp: 35,
+                   weaknesses: ['feu', 'sacre'], resistances: ['occulte'] }, // trop bêtes pour être maudits
+    roiGobelin:  { maxHp: 340, defense: 0.15, power: 1.20, speed: 8,  xp: 200,
+                   weaknesses: ['feu'], resistances: ['occulte', 'physique'] },
+    cultiste:    { maxHp: 120, defense: 0.06, power: 1.00, speed: 10, xp: 55,
+                   weaknesses: ['sacre'], resistances: ['occulte'] },
+    hierophante: { maxHp: 300, defense: 0.12, power: 1.15, speed: 11, xp: 190,
+                   weaknesses: ['sacre'], resistances: ['occulte'] },
+  },
+  factionSkills: {
+    // Bandits
+    coupDeSurin:     { power: 50, cooldown: 0, variance: 0.15, dotValue: 12, dotDuration: 2 },
+    jetDeCouteau:    { power: 45, cooldown: 0, variance: 0.25 },
+    racketOrganise:  { power: 35, cooldown: 2, mpDrain: 18 },
+    coupBas:         { power: 80, cooldown: 2, critChance: 0.4 },
+    // Gobelins
+    grosGourdin:     { power: 60, cooldown: 0, variance: 0.45 },
+    jetDeCaillou:    { power: 30, cooldown: 1, skipChance: 0.3 },
+    kriKriKri:       { cooldown: 3, damageDownValue: 0.2, duration: 2 },
+    chargeDuRoi:     { power: 95, cooldown: 2, critChance: 0.25 },
+    // Cultistes
+    psaumeObscur:    { power: 55, cooldown: 0 },
+    chantMonotone:   { cooldown: 3, skipChance: 0.5 },
+    saigneeRituelle: { power: 75, cooldown: 2, selfCost: 15 },
+    cercleDInvocation: { cooldown: 3, damageUpValue: 0.3, duration: 2 },
+    appelDuGrandDormeur: { power: 60, cooldown: 3 },
+  },
+
   // Objets
   items: {
     dossierDeSoin: { heal: 90 },

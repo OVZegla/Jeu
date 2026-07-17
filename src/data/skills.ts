@@ -588,6 +588,170 @@ export const jurisprudenceEcrasante: Skill = {
 };
 
 // ============================================================
+// Factions de la Forêt de Lamber
+// ============================================================
+const F = BALANCE2.factionSkills;
+
+// --- Bandits (clichés de grands chemins) ---
+export const coupDeSurin: Skill = {
+  id: 'coupDeSurin',
+  name: 'Coup de surin',
+  description: 'Un coup de lame dans le dos, comme le veut la tradition. Saignement.',
+  icon: '🔪',
+  category: 'attack', element: 'physique', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.coupDeSurin.cooldown, basePower: F.coupDeSurin.power,
+  variance: F.coupDeSurin.variance, intensity: 'light',
+  presentation: { vfx: 'slash', color: 0xcccccc, hitDelayMs: 300, approach: 'melee', shake: 0.2 },
+  applies: [
+    { type: 'dot', name: 'Saignement', description: `${F.coupDeSurin.dotValue} dégâts/tour`, duration: F.coupDeSurin.dotDuration, value: F.coupDeSurin.dotValue, icon: '🩸' },
+  ],
+};
+
+export const jetDeCouteau: Skill = {
+  id: 'jetDeCouteau',
+  name: 'Jet de couteau',
+  description: 'Lancé de loin, avec plus d\'enthousiasme que de précision.',
+  icon: '🗡',
+  category: 'attack', element: 'physique', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.jetDeCouteau.cooldown, basePower: F.jetDeCouteau.power,
+  variance: F.jetDeCouteau.variance, intensity: 'light',
+  presentation: { vfx: 'slash', color: 0xddddee, hitDelayMs: 340, approach: 'ranged', shake: 0.15 },
+};
+
+export const racketOrganise: Skill = {
+  id: 'racketOrganise',
+  name: 'Racket organisé',
+  description: '« La bourse ou la vie ! » Les deux, en fait : dégâts + vol de MP.',
+  icon: '💰',
+  category: 'attack', element: 'physique', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.racketOrganise.cooldown, basePower: F.racketOrganise.power,
+  mpDrain: F.racketOrganise.mpDrain, intensity: 'skill',
+  presentation: { vfx: 'slash', color: 0xffdd88, hitDelayMs: 320, approach: 'melee', shake: 0.2 },
+};
+
+export const coupBas: Skill = {
+  id: 'coupBas',
+  name: 'Coup bas',
+  description: 'Le chef ne se bat pas à la loyale. Personne n\'est surpris.',
+  icon: '💢',
+  category: 'attack', element: 'physique', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.coupBas.cooldown, basePower: F.coupBas.power,
+  critChance: F.coupBas.critChance, intensity: 'heavy',
+  presentation: { vfx: 'slash', color: 0xff8866, hitDelayMs: 360, approach: 'melee', shake: 0.45, hitStopMs: 70 },
+};
+
+// --- Gobelins (bêtes et méchants, surtout bêtes) ---
+export const grosGourdin: Skill = {
+  id: 'grosGourdin',
+  name: 'Gros gourdin',
+  description: 'GROS GOURDIN TAPER. Dégâts très variables (il ferme les yeux en frappant).',
+  icon: '🏏',
+  category: 'attack', element: 'physique', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.grosGourdin.cooldown, basePower: F.grosGourdin.power,
+  variance: F.grosGourdin.variance, intensity: 'light',
+  presentation: { vfx: 'slash', color: 0xbb9955, hitDelayMs: 380, approach: 'melee', shake: 0.3 },
+};
+
+export const jetDeCaillou: Skill = {
+  id: 'jetDeCaillou',
+  name: 'Jet de caillou',
+  description: 'Un caillou. Parfois il assomme. Parfois c\'était un champignon.',
+  icon: '🪨',
+  category: 'attack', element: 'physique', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.jetDeCaillou.cooldown, basePower: F.jetDeCaillou.power,
+  applyChance: F.jetDeCaillou.skipChance, intensity: 'light',
+  presentation: { vfx: 'slash', color: 0x999988, hitDelayMs: 360, approach: 'ranged', shake: 0.15 },
+  applies: [
+    { type: 'skipTurn', name: 'Assommé', description: 'Tour sauté', duration: 1, value: 1, icon: '💫' },
+  ],
+};
+
+export const kriKriKri: Skill = {
+  id: 'kriKriKri',
+  name: 'KRI KRI KRI !',
+  description: 'Un cri strident et insupportable. Toute l\'équipe perd sa concentration.',
+  icon: '📢',
+  category: 'debuff', element: 'physique', target: 'allEnemies', menuSlot: 'special',
+  mpCost: 0, cooldown: F.kriKriKri.cooldown, basePower: 0, intensity: 'skill',
+  presentation: { vfx: 'papers', color: 0xaaff66, hitDelayMs: 420, approach: 'none', shake: 0.2 },
+  applies: [
+    { type: 'damageDown', name: 'Oreilles qui sifflent', description: `-${Math.round(F.kriKriKri.damageDownValue * 100)}% dégâts infligés`, duration: F.kriKriKri.duration, value: F.kriKriKri.damageDownValue, icon: '📢' },
+  ],
+};
+
+export const chargeDuRoi: Skill = {
+  id: 'chargeDuRoi',
+  name: 'Charge du Roi',
+  description: 'Sa Majesté fonce dans le tas. La stratégie royale par excellence.',
+  icon: '👑',
+  category: 'attack', element: 'physique', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.chargeDuRoi.cooldown, basePower: F.chargeDuRoi.power,
+  critChance: F.chargeDuRoi.critChance, intensity: 'heavy',
+  presentation: { vfx: 'slash', color: 0xffcc44, hitDelayMs: 420, approach: 'melee', shake: 0.55, hitStopMs: 80 },
+};
+
+// --- Cultistes (illuminés du Grand Dormeur) ---
+export const psaumeObscur: Skill = {
+  id: 'psaumeObscur',
+  name: 'Psaume obscur',
+  description: 'Un verset interdit, récité avec beaucoup trop de conviction.',
+  icon: '🕯',
+  category: 'attack', element: 'occulte', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.psaumeObscur.cooldown, basePower: F.psaumeObscur.power,
+  intensity: 'light',
+  presentation: { vfx: 'occult', color: 0xb46bff, hitDelayMs: 380, approach: 'ranged', shake: 0.2 },
+};
+
+export const chantMonotone: Skill = {
+  id: 'chantMonotone',
+  name: 'Chant monotone',
+  description: 'Une litanie interminable. Risque élevé d\'endormissement.',
+  icon: '💤',
+  category: 'debuff', element: 'occulte', target: 'enemy', menuSlot: 'special',
+  mpCost: 0, cooldown: F.chantMonotone.cooldown, basePower: 0,
+  applyChance: F.chantMonotone.skipChance, intensity: 'skill',
+  presentation: { vfx: 'occult', color: 0x8877cc, hitDelayMs: 420, approach: 'none' },
+  applies: [
+    { type: 'skipTurn', name: 'Somnolence rituelle', description: 'Tour sauté', duration: 1, value: 1, icon: '💤' },
+  ],
+};
+
+export const saigneeRituelle: Skill = {
+  id: 'saigneeRituelle',
+  name: 'Saignée rituelle',
+  description: 'Le cultiste s\'entaille la paume pour frapper plus fort. Très premier degré.',
+  icon: '🩸',
+  category: 'attack', element: 'occulte', target: 'enemy', menuSlot: 'attaque',
+  mpCost: 0, cooldown: F.saigneeRituelle.cooldown, basePower: F.saigneeRituelle.power,
+  selfCost: F.saigneeRituelle.selfCost, intensity: 'heavy',
+  presentation: { vfx: 'occult', color: 0xff5588, hitDelayMs: 420, approach: 'ranged', shake: 0.35 },
+};
+
+export const cercleDInvocation: Skill = {
+  id: 'cercleDInvocation',
+  name: 'Cercle d\'invocation',
+  description: 'Le hiérophante galvanise ses ouailles : +30% de dégâts pour la secte.',
+  icon: '🔮',
+  category: 'buff', element: 'occulte', target: 'allAllies', menuSlot: 'special',
+  mpCost: 0, cooldown: F.cercleDInvocation.cooldown, basePower: 0, intensity: 'skill',
+  presentation: { vfx: 'summon', color: 0xcc66ff, hitDelayMs: 480, approach: 'none', shake: 0.2 },
+  applies: [
+    { type: 'damageUp', name: 'Ferveur du cercle', description: `+${Math.round(F.cercleDInvocation.damageUpValue * 100)}% dégâts infligés`, duration: F.cercleDInvocation.duration, value: F.cercleDInvocation.damageUpValue, icon: '🔮' },
+  ],
+};
+
+export const appelDuGrandDormeur: Skill = {
+  id: 'appelDuGrandDormeur',
+  name: 'Appel du Grand Dormeur',
+  description: 'Le Grand Dormeur ne répond jamais, mais l\'onde de l\'appel fait très mal à tout le monde.',
+  icon: '🌘',
+  category: 'attack', element: 'occulte', target: 'allEnemies', menuSlot: 'special',
+  mpCost: 0, cooldown: F.appelDuGrandDormeur.cooldown, basePower: F.appelDuGrandDormeur.power,
+  intensity: 'heavy',
+  presentation: { vfx: 'occult', color: 0x9944ff, hitDelayMs: 520, approach: 'none', shake: 0.5, hitStopMs: 60 },
+};
+
+// ============================================================
 // Registre
 // ============================================================
 const ALL_SKILLS: Skill[] = [
@@ -599,6 +763,9 @@ const ALL_SKILLS: Skill[] = [
   reunionInterminable, subventionRefusee, pagesProtectrices, archivageDefinitif,
   coupDeTranche, paragrapheSoporifique, coupureAdministrative,
   notificationRecommandee, ponctionBudgetaire, jurisprudenceEcrasante,
+  coupDeSurin, jetDeCouteau, racketOrganise, coupBas,
+  grosGourdin, jetDeCaillou, kriKriKri, chargeDuRoi,
+  psaumeObscur, chantMonotone, saigneeRituelle, cercleDInvocation, appelDuGrandDormeur,
 ];
 
 export const SKILLS: Record<string, Skill> = Object.fromEntries(

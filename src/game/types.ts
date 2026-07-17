@@ -150,6 +150,7 @@ export type Interactable =
       groupId: string;        // référence ENEMY_GROUPS
       patrol?: { dx: number; dy: number; ms: number }; // aller-retour (0..1 relatif map)
       aggroRadius?: number;   // déclenche le combat à l'approche (px monde)
+      grounded?: boolean;     // humanoïde au sol (pas de lévitation ni flammes violettes)
     }
   | {
       // V2 : point de sauvegarde / repos

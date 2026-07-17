@@ -18,6 +18,7 @@ interface Visual {
   baseY: number;
   alive: boolean;
   isHero: boolean;
+  floats: boolean;
   breathTween?: Phaser.Tweens.Tween;
   telegraphFx?: Phaser.GameObjects.Particles.ParticleEmitter;
 }
@@ -66,29 +67,33 @@ export class BattleSceneV2 extends Phaser.Scene {
   private pendingEnemies: EnemyCombatant[] = [];
   private isBossBattle = false;
   private created = false;
+  private backgroundKey = 'arena';
 
   constructor(events: BattleSceneV2Events) {
     super({ key: 'BattleSceneV2' });
     this.events_ = events;
   }
 
-  setInitialCombatants(heroes: Combatant[], enemies: EnemyCombatant[]) {
+  setInitialCombatants(heroes: Combatant[], enemies: EnemyCombatant[], background: 'arena' | 'forest' | 'cave' = 'arena') {
     this.pendingHeroes = heroes;
     this.pendingEnemies = enemies;
     this.isBossBattle = enemies.some((e) => e.isBoss);
+    this.backgroundKey = background === 'forest' ? 'battle-forest' : background === 'cave' ? 'battle-cave' : 'arena';
   }
 
   preload() {
     const base = import.meta.env.BASE_URL || '/';
     this.load.image('arena', `${base}assets/arena.jpg`);
+    this.load.image('battle-forest', `${base}assets/battle-forest.jpg`);
+    this.load.image('battle-cave', `${base}assets/battle-cave.jpg`);
     this.load.image('sprite-datpaloof', `${base}assets/sprites/datpaloof.png`);
     this.load.image('sprite-baghaar', `${base}assets/sprites/baghaar.png`);
     this.load.image('sprite-zlatax', `${base}assets/sprites/zlatax.png`);
     this.load.image('sprite-boss', `${base}assets/sprites/boss.png`);
-    this.load.image('enemy-grimoire', `${base}assets/sprites/enemies/grimoire.png`);
-    this.load.image('enemy-grimoire2', `${base}assets/sprites/enemies/grimoire2.png`);
-    this.load.image('enemy-decret', `${base}assets/sprites/enemies/decret.png`);
-    this.load.image('enemy-decret2', `${base}assets/sprites/enemies/decret2.png`);
+    for (const e of ['grimoire', 'grimoire2', 'decret', 'decret2',
+      'bandit', 'banditChef', 'gobelin', 'roiGobelin', 'cultiste', 'hierophante']) {
+      this.load.image(`enemy-${e}`, `${base}assets/sprites/enemies/${e}.png`);
+    }
 
     this.load.on('loaderror', (file: { url: string }) => {
       if (file.url?.includes('/assets/music/') || file.url?.includes('/assets/sfx/')) return;
@@ -107,8 +112,8 @@ export class BattleSceneV2 extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // Fond
-    const bg = this.add.image(w / 2, h / 2, 'arena');
+    // Fond (arène des Archives, forêt ou caverne selon le groupe)
+    const bg = this.add.image(w / 2, h / 2, this.textures.exists(this.backgroundKey) ? this.backgroundKey : 'arena');
     const s = Math.max(w / bg.width, h / bg.height);
     bg.setScale(s).setDepth(0);
     this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.22).setDepth(1);
@@ -291,8 +296,8 @@ export class BattleSceneV2 extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    // Flottement des ennemis-documents (ils lévitent)
-    if (!isHero && !(c as EnemyCombatant).isBoss) {
+    // Flottement réservé aux ennemis-documents (les humanoïdes restent au sol)
+    if (!isHero && !(c as EnemyCombatant).isBoss && (c as EnemyCombatant).floats) {
       this.tweens.add({
         targets: sprite,
         y: -8,
@@ -306,6 +311,7 @@ export class BattleSceneV2 extends Phaser.Scene {
     this.visuals.set(c.id, {
       container, sprite, shadow, ring,
       baseX: x, baseY: y, alive: true, isHero,
+      floats: !isHero && ((c as EnemyCombatant).floats ?? false),
       breathTween: breath,
     });
   }
@@ -606,8 +612,8 @@ export class BattleSceneV2 extends Phaser.Scene {
         duration: 650,
         ease: 'Cubic.easeOut',
       });
-    } else {
-      // Les documents se désintègrent en particules
+    } else if (v.floats) {
+      // Les documents se désintègrent en confettis de papier
       const burst = this.add.particles(v.container.x, v.container.y - v.sprite.displayHeight * 0.4, 'p2-paper', {
         lifespan: 900,
         speed: { min: 60, max: 220 },
@@ -626,6 +632,17 @@ export class BattleSceneV2 extends Phaser.Scene {
         alpha: 0,
         scale: 0.7,
         duration: 500,
+        ease: 'Cubic.easeIn',
+      });
+    } else {
+      // Les humanoïdes s'effondrent dans un nuage de poussière
+      this.burst(v.container.x, v.container.y - 8, 'p2-red', 0xcc8866, 16, 180, 260);
+      this.tweens.add({
+        targets: v.container,
+        alpha: 0,
+        angle: -78,
+        y: v.baseY + 14,
+        duration: 600,
         ease: 'Cubic.easeIn',
       });
     }

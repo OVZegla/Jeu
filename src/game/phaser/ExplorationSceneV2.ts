@@ -136,10 +136,10 @@ export class ExplorationSceneV2 extends Phaser.Scene {
       this.load.image(`npc-${n}`, `${base}assets/sprites/npcs/${n}.png`);
     }
     // Ennemis visibles en exploration
-    this.load.image('enemy-grimoire', `${base}assets/sprites/enemies/grimoire.png`);
-    this.load.image('enemy-grimoire2', `${base}assets/sprites/enemies/grimoire2.png`);
-    this.load.image('enemy-decret', `${base}assets/sprites/enemies/decret.png`);
-    this.load.image('enemy-decret2', `${base}assets/sprites/enemies/decret2.png`);
+    for (const e of ['grimoire', 'grimoire2', 'decret', 'decret2',
+      'bandit', 'banditChef', 'gobelin', 'roiGobelin', 'cultiste', 'hierophante']) {
+      this.load.image(`enemy-${e}`, `${base}assets/sprites/enemies/${e}.png`);
+    }
 
     this.load.on('loaderror', (file: { key: string; url: string }) => {
       console.warn('[ExplorationV2] Asset manquant :', file.url);
@@ -594,31 +594,45 @@ export class ExplorationSceneV2 extends Phaser.Scene {
         }
         sprite.setDepth(y);
         group.push(sprite);
-        // Lévitation + flammes violettes
-        this.tweens.add({
-          targets: sprite,
-          y: y - 18,
-          duration: 1400 + Math.random() * 500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-        const flames = this.add.particles(x, y - 30, 'p-purple-glow', {
-          lifespan: 900,
-          speedY: { min: -26, max: -10 },
-          speedX: { min: -8, max: 8 },
-          scale: { start: 0.5, end: 0 },
-          alpha: { start: 0.6, end: 0 },
-          frequency: 180,
-          blendMode: 'ADD',
-        });
-        flames.setDepth(y + 1);
-        group.push(flames);
+        const movers: Phaser.GameObjects.GameObject[] = [shadow, sprite];
+        if (it.grounded) {
+          // Humanoïde : petit balancement au sol, pas de lévitation
+          this.tweens.add({
+            targets: sprite,
+            y: y - 11,
+            duration: 900 + Math.random() * 300,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        } else {
+          // Document animé : lévitation + flammes violettes
+          this.tweens.add({
+            targets: sprite,
+            y: y - 18,
+            duration: 1400 + Math.random() * 500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+          const flames = this.add.particles(x, y - 30, 'p-purple-glow', {
+            lifespan: 900,
+            speedY: { min: -26, max: -10 },
+            speedX: { min: -8, max: 8 },
+            scale: { start: 0.5, end: 0 },
+            alpha: { start: 0.6, end: 0 },
+            frequency: 180,
+            blendMode: 'ADD',
+          });
+          flames.setDepth(y + 1);
+          group.push(flames);
+          movers.push(flames);
+        }
         // Patrouille : tout le groupe se déplace en aller-retour
         if (it.patrol) {
           const dx = this.worldW * it.patrol.dx;
           const dy = this.worldH * it.patrol.dy;
-          for (const obj of [shadow, sprite, flames]) {
+          for (const obj of movers) {
             this.tweens.add({
               targets: obj,
               x: `+=${dx}`,

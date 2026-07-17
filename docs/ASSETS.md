@@ -28,8 +28,12 @@ Tous dérivés des assets originaux ci-dessus — même licence, même style.
 
 | `sprites/npcs/*.png` (8 PNJ) | recolorations HSV de `exploration/datpaloof/front.png` | Quenticast, Juiffy, Clemodin, Cubique, Steven, Père Célestin, Greffière Ordonna, Bragnar (`scripts/gen-ramees-assets.py`) |
 | `exploration/ramees/interiors/*.jpg` (7 salles) | pixel art dessiné par code dans la palette du jeu | intérieurs de Ramees : auberge, église, mairie, forge, herboristerie, échoppe, maison de Quenticast |
+| `sprites/enemies/{bandit,banditChef,gobelin,roiGobelin,cultiste,hierophante}.png` | **pixel art original** (grilles ASCII dans `scripts/gen-lamber-assets.py`) | factions de la Forêt de Lamber |
+| `battle-forest.jpg` | crop gradé de `exploration/lamber/2-2.jpg` | fond des combats en forêt |
+| `battle-cave.jpg` | pixel art dessiné par code | fond des combats en donjon |
+| `exploration/donjons/*.jpg` (2 salles) | pixel art dessiné par code | repaire des bandits, antre des gobelins |
 
-Régénération : `pip install pillow && python3 scripts/gen-derived-assets.py && python3 scripts/gen-ramees-assets.py`.
+Régénération : `pip install pillow && python3 scripts/gen-derived-assets.py && python3 scripts/gen-ramees-assets.py && python3 scripts/gen-lamber-assets.py`.
 
 ### Nettoyage de détourage
 

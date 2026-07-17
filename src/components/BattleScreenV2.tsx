@@ -21,6 +21,7 @@ import {
   forecastTurnOrder,
   submitPlayerAction,
 } from '../game/combat/engine';
+import { getEnemyGroup } from '../data/enemies';
 import { getSkill } from '../data/skills';
 import { BattleSceneV2 } from '../game/phaser/BattleSceneV2';
 import { getItem, ITEMS } from '../data/items';
@@ -100,7 +101,11 @@ export function BattleScreenV2({ party, inventory, groupId, battleLabel, muted, 
         clickTargetRef.current?.(id);
       },
     });
-    scene.setInitialCombatants(engineRef.current.heroes, engineRef.current.enemies);
+    scene.setInitialCombatants(
+      engineRef.current.heroes,
+      engineRef.current.enemies,
+      getEnemyGroup(groupId).background ?? 'arena'
+    );
     const game = new Phaser.Game({
       type: Phaser.AUTO,
       parent: containerRef.current,
