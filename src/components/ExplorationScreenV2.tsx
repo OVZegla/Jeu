@@ -59,6 +59,7 @@ export function ExplorationScreenV2(props: Props) {
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<ExplorationSceneV2 | null>(null);
   const [entrySide, setEntrySide] = useState<ExitSide | null>(null);
+  const [entryPoint, setEntryPoint] = useState<{ x: number; y: number } | null>(null);
   const [promptLabel, setPromptLabel] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pauseTab, setPauseTab] = useState<PauseTab>('main');
@@ -195,6 +196,24 @@ export function ExplorationScreenV2(props: Props) {
         }
         break;
       }
+      case 'npc': {
+        openDialogue(it.dialogueId, () => {
+          if (it.gives && it.gives.length > 0 && !fl.collectedItems.includes(it.id)) {
+            const nextInv = { ...inv };
+            for (const { itemId, count } of it.gives) {
+              nextInv[itemId] = (nextInv[itemId] || 0) + count;
+            }
+            cbRef.current.onInventoryChange(nextInv);
+            cbRef.current.onFlagsChange({ ...fl, collectedItems: [...fl.collectedItems, it.id] });
+            playSfx('item');
+            showToast(
+              `${it.name} vous donne : ` +
+              it.gives.map((x) => `${ITEMS[x.itemId]?.icon ?? ''} ${ITEMS[x.itemId]?.name} ×${x.count}`).join(' — ')
+            );
+          }
+        });
+        break;
+      }
       case 'teleportMenu': {
         setTeleportMenu(it.destinations);
         break;
@@ -235,8 +254,9 @@ export function ExplorationScreenV2(props: Props) {
           { x: 0, y: 0 }
         );
       },
-      onTeleport: (toMapId, fromSide) => {
+      onTeleport: (toMapId, fromSide, entry) => {
         setEntrySide(fromSide ?? null);
+        setEntryPoint(entry ?? null);
         cbRef.current.onMapChange(toMapId);
       },
       onReady: () => {
@@ -306,7 +326,8 @@ export function ExplorationScreenV2(props: Props) {
       sealFragments: flags.sealFragments,
       bossDefeated: flags.bossDefeated,
     });
-    sceneRef.current?.applyMapSwitch(mapId, entrySide || undefined);
+    sceneRef.current?.applyMapSwitch(mapId, entrySide || undefined, entryPoint || undefined);
+    setEntryPoint(null);
     setPromptLabel(null);
     setMenuOpen(false);
     setTeleportMenu(null);

@@ -26,7 +26,8 @@ export interface ExplorationSceneV2Events {
   // Interactions gérées côté React (dialogues, save, combats…)
   onInteract?: (it: Interactable) => void;
   onAggroBattle?: (it: Extract<Interactable, { type: 'battle' }>) => void;
-  onTeleport?: (toMapId: MapId, fromSide?: ExitSide) => void;
+  // entry : position d'arrivée précise (0..1) — ex: devant la porte d'un bâtiment
+  onTeleport?: (toMapId: MapId, fromSide?: ExitSide, entry?: { x: number; y: number }) => void;
 }
 
 const PLAYER_SPEED = 185;
@@ -99,6 +100,7 @@ export class ExplorationSceneV2 extends Phaser.Scene {
 
   private currentExits: Partial<Record<ExitSide, import('../types').MapExit>> = {};
   private nextEntrySide: ExitSide | null = null;
+  private nextEntryPoint: { x: number; y: number } | null = null;
   private exitParticles: Phaser.GameObjects.GameObject[] = [];
   private exitsLockedUntil = 0;
   private aggroLockedUntil = 0;
@@ -128,6 +130,10 @@ export class ExplorationSceneV2 extends Phaser.Scene {
       for (let i = 0; i < 4; i++) {
         this.load.image(`ex-datpaloof-${d}-${i}`, `${base}assets/exploration/datpaloof/walk/${d}_${i}.png`);
       }
+    }
+    // PNJ (recolorations du sprite chibi — voir scripts/gen-ramees-assets.py)
+    for (const n of ['quenticast', 'juiffy', 'clemodin', 'cubique', 'steven', 'pretre', 'greffiere', 'forgeron']) {
+      this.load.image(`npc-${n}`, `${base}assets/sprites/npcs/${n}.png`);
     }
     // Ennemis visibles en exploration
     this.load.image('enemy-grimoire', `${base}assets/sprites/enemies/grimoire.png`);
@@ -319,7 +325,12 @@ export class ExplorationSceneV2 extends Phaser.Scene {
     this.applyPlayerTexture();
 
     // Spawn
-    if (this.nextEntrySide) {
+    if (this.nextEntryPoint) {
+      this.logicalX = this.worldOffsetX + this.worldW * this.nextEntryPoint.x;
+      this.logicalY = this.worldOffsetY + this.worldH * this.nextEntryPoint.y;
+      this.nextEntryPoint = null;
+      this.nextEntrySide = null;
+    } else if (this.nextEntrySide) {
       const margin = 60;
       switch (this.nextEntrySide) {
         case 'north':
@@ -575,7 +586,7 @@ export class ExplorationSceneV2 extends Phaser.Scene {
         if (this.textures.exists(it.spriteKey)) {
           const img = this.add.image(x, y - 8, it.spriteKey);
           img.setOrigin(0.5, 1);
-          img.setScale(64 / img.height);
+          img.setScale((64 * Math.max(0.5, this.playerScale)) / img.height);
           sprite = img;
         } else {
           sprite = this.add.rectangle(x, y - 40, 40, 56, 0x4a1a4a, 0.8);
@@ -626,6 +637,48 @@ export class ExplorationSceneV2 extends Phaser.Scene {
             });
           }
         }
+        break;
+      }
+      case 'npc': {
+        // PNJ : même échelle que le joueur sur cette map.
+        const npcH = PLAYER_TARGET_HEIGHT * this.playerScale * 0.96;
+        const shadow = this.add.ellipse(x, y + 2, 34 * this.playerScale, 7 * this.playerScale, 0x000000, 0.45);
+        shadow.setDepth(y - 1);
+        group.push(shadow);
+        if (this.textures.exists(it.spriteKey)) {
+          const sprite = this.add.image(x, y, it.spriteKey);
+          sprite.setOrigin(0.5, 1);
+          sprite.setScale(npcH / sprite.height);
+          if (it.flip) sprite.setFlipX(true);
+          sprite.setDepth(y);
+          group.push(sprite);
+          // Respiration
+          this.tweens.add({
+            targets: sprite,
+            scaleY: sprite.scaleY * 1.012,
+            duration: 1200 + Math.random() * 700,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        } else {
+          const ph = this.add.rectangle(x, y - npcH / 2, npcH * 0.5, npcH, 0x335577, 0.8);
+          ph.setStrokeStyle(2, 0x88aacc);
+          ph.setDepth(y);
+          group.push(ph);
+        }
+        // Nom au-dessus de la tête (discret)
+        const nameTag = this.add.text(x, y - npcH - 6, it.name, {
+          fontFamily: 'Georgia, serif',
+          fontSize: `${Math.max(11, Math.round(13 * this.playerScale + 4))}px`,
+          color: '#cfe0ff',
+          stroke: '#000',
+          strokeThickness: 3,
+        });
+        nameTag.setOrigin(0.5, 1);
+        nameTag.setDepth(y + 2);
+        nameTag.setAlpha(0.9);
+        group.push(nameTag);
         break;
       }
       case 'savepoint': {
@@ -740,17 +793,19 @@ export class ExplorationSceneV2 extends Phaser.Scene {
 
   private spawnSummonStone(x: number, y: number, color: number): Phaser.GameObjects.GameObject[] {
     const group: Phaser.GameObjects.GameObject[] = [];
+    // La pierre suit l'échelle de la map (petite sur les maps « zoom arrière »)
+    const stoneH = Math.max(34, STONE_TARGET_HEIGHT * this.playerScale * 1.1);
     if (this.textures.exists('ex-summon-stone')) {
-      const shadow = this.add.ellipse(x, y + 3, 50, 10, 0x000000, 0.5);
+      const shadow = this.add.ellipse(x, y + 3, stoneH * 0.7, stoneH * 0.14, 0x000000, 0.5);
       shadow.setDepth(y - 1);
       group.push(shadow);
       const sprite = this.add.image(x, y, 'ex-summon-stone');
       sprite.setOrigin(0.5, 1);
-      sprite.setScale(STONE_TARGET_HEIGHT / sprite.height);
+      sprite.setScale(stoneH / sprite.height);
       sprite.setDepth(y);
       if (color !== 0xaa66ff) sprite.setTint(0xbbffdd);
       group.push(sprite);
-      const halo = this.add.ellipse(x, y - STONE_TARGET_HEIGHT / 2, 70, 70, color, 0.18);
+      const halo = this.add.ellipse(x, y - stoneH / 2, stoneH, stoneH, color, 0.18);
       halo.setDepth(y - 0.5);
       halo.setBlendMode(Phaser.BlendModes.ADD);
       this.tweens.add({
@@ -962,7 +1017,9 @@ export class ExplorationSceneV2 extends Phaser.Scene {
           interactable: v.data,
           worldX: v.worldX,
           worldY: v.worldY,
-          spriteH: v.data.type === 'boss' ? BOSS_TARGET_HEIGHT : STONE_TARGET_HEIGHT,
+          spriteH: v.data.type === 'boss'
+            ? BOSS_TARGET_HEIGHT
+            : Math.max(40, STONE_TARGET_HEIGHT * this.playerScale),
         };
       }
     }
@@ -1084,8 +1141,9 @@ export class ExplorationSceneV2 extends Phaser.Scene {
     this.time.delayedCall(300, () => this.events_.onTeleport?.(toMapId));
   }
 
-  applyMapSwitch(mapId: MapId, fromSide?: ExitSide) {
+  applyMapSwitch(mapId: MapId, fromSide?: ExitSide, entry?: { x: number; y: number }) {
     this.nextEntrySide = fromSide || null;
+    this.nextEntryPoint = entry || null;
     this.loadMap(mapId);
     this.exitsLockedUntil = this.time.now + 600;
     this.aggroLockedUntil = this.time.now + 900;
@@ -1172,17 +1230,19 @@ export class ExplorationSceneV2 extends Phaser.Scene {
     else if (e.south && this.logicalY >= this.worldOffsetY + this.worldH - marginY) side = 'south';
     if (!side) return;
     const exit = e[side]!;
-    this.triggerExit(side, exit.toMapId);
+    this.triggerExit(side, exit.toMapId, exit.entryX !== undefined && exit.entryY !== undefined
+      ? { x: exit.entryX, y: exit.entryY }
+      : undefined);
   }
 
-  private triggerExit(fromSide: ExitSide, toMapId: MapId) {
+  private triggerExit(fromSide: ExitSide, toMapId: MapId, entry?: { x: number; y: number }) {
     this.switching = true;
     this.cameras.main.fadeOut(260, 0, 0, 0);
     const opposite: Record<ExitSide, ExitSide> = {
       north: 'south', south: 'north', east: 'west', west: 'east',
     };
     this.time.delayedCall(280, () => {
-      this.events_.onTeleport?.(toMapId, opposite[fromSide]);
+      this.events_.onTeleport?.(toMapId, opposite[fromSide], entry);
     });
   }
 

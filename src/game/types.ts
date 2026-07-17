@@ -191,6 +191,19 @@ export type Interactable =
       lockedBySeal?: boolean; // nécessite les 2 fragments du sceau
     }
   | {
+      // V2 : personnage non-joueur (dialogue, éventuel cadeau une seule fois)
+      type: 'npc';
+      id: string;
+      x: number;
+      y: number;
+      spriteKey: string;
+      name: string;           // affiché au-dessus de la tête
+      label: string;          // prompt d'interaction
+      dialogueId: string;
+      gives?: Array<{ itemId: string; count: number }>; // remis à la 1ère discussion
+      flip?: boolean;
+    }
+  | {
       type: 'teleport';
       id: string;
       x: number;

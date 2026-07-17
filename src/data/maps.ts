@@ -36,36 +36,67 @@ export const BUREAU_MAP: ExplorationMapConfig = {
 };
 
 // === La cité de Ramees ===
-// - La pierre de tp ne mène plus à Lamber, elle ouvre un menu (juste Bureau pour l'instant)
-// - L'accès à la Forêt de Lamber se fait par le SUD (bord) avec particules indicatives
+// Ville vivante : 7 bâtiments avec intérieurs (portes), PNJ, une seule pierre
+// de téléport (place centrale). Accès Forêt de Lamber par le pont au SUD-OUEST.
 export const RAMEES_MAP: ExplorationMapConfig = {
   id: 'ramees',
   name: 'Ramees',
   imageKey: 'ex-map-ramees',
   imagePath: 'assets/exploration/ramees/map.jpg',
-  spawn: { x: 0.50, y: 0.88 },
+  spawn: { x: 0.50, y: 0.60 },
+  mood: 'city',
+  depthScale: { top: 0.85, bottom: 1.10 },
+  lights: [
+    { x: 0.485, y: 0.470, r: 30, color: 0xffcc77 }, // fontaine
+    { x: 0.560, y: 0.520, r: 26, color: 0xffcc77 },
+    { x: 0.420, y: 0.545, r: 26, color: 0xffcc77 },
+  ],
   interactables: [
     {
       type: 'teleportMenu',
       id: 'tp-stone-ramees',
-      x: 0.50,
-      y: 0.50,
+      x: 0.525, y: 0.475,
       label: '🪨 Pierre de téléport',
       destinations: [
         { toMapId: 'archives-entree', label: '📚 Les Archives Infinies' },
       ],
     },
+    { type: 'door', id: 'door-eglise', x: 0.472, y: 0.305, label: '⛪ Entrer dans l\'église', toMapId: 'ramees-eglise' },
+    { type: 'door', id: 'door-mairie', x: 0.656, y: 0.390, label: '🏛 Entrer dans la mairie', toMapId: 'ramees-mairie' },
+    { type: 'door', id: 'door-forge', x: 0.215, y: 0.385, label: '⚒ Entrer dans la forge', toMapId: 'ramees-forge' },
+    { type: 'door', id: 'door-auberge', x: 0.790, y: 0.490, label: '🍺 Entrer dans l\'auberge', toMapId: 'ramees-auberge' },
+    { type: 'door', id: 'door-herbo', x: 0.887, y: 0.570, label: '🌿 Entrer dans l\'herboristerie', toMapId: 'ramees-herboristerie' },
+    { type: 'door', id: 'door-echoppe', x: 0.215, y: 0.570, label: '🧺 Entrer dans l\'échoppe', toMapId: 'ramees-echoppe' },
+    { type: 'door', id: 'door-quenticast', x: 0.797, y: 0.695, label: '🚪 Entrer chez Quenticast', toMapId: 'ramees-quenticast' },
+    {
+      type: 'document',
+      id: 'ramees-fontaine',
+      x: 0.485, y: 0.465,
+      label: '⛲ La fontaine de Ramees',
+      dialogueId: 'ramees-fontaine',
+    },
   ],
   ambianceColor: 0x000010,
   walkable: [
-    { x: 0.10, y: 0.46, w: 0.80, h: 0.10 },
-    { x: 0.45, y: 0.20, w: 0.10, h: 0.70 },
-    { x: 0.30, y: 0.42, w: 0.40, h: 0.18 },
-    { x: 0.20, y: 0.75, w: 0.60, h: 0.18 },
-    // Sortie sud-ouest (pont vers Lamber) → permet d'atteindre le bord
-    { x: 0.10, y: 0.85, w: 0.30, h: 0.15 },
+    // Grande route horizontale + place centrale
+    { x: 0.06, y: 0.42, w: 0.88, h: 0.16 },
+    { x: 0.30, y: 0.38, w: 0.44, h: 0.26 },
+    // Colonne centrale (église ↔ sud)
+    { x: 0.42, y: 0.28, w: 0.16, h: 0.52 },
+    // Accès forge (ouest) et mairie (est)
+    { x: 0.14, y: 0.35, w: 0.30, h: 0.10 },
+    { x: 0.56, y: 0.36, w: 0.16, h: 0.10 },
+    // Accès auberge / herboristerie / maison de Quenticast (est)
+    { x: 0.70, y: 0.44, w: 0.16, h: 0.10 },
+    { x: 0.78, y: 0.50, w: 0.17, h: 0.10 },
+    { x: 0.70, y: 0.56, w: 0.14, h: 0.16 },
+    // Accès échoppe (ouest)
+    { x: 0.13, y: 0.50, w: 0.20, h: 0.10 },
+    // Bande sud + pont vers Lamber (sud-ouest)
+    { x: 0.20, y: 0.68, w: 0.56, h: 0.12 },
+    { x: 0.10, y: 0.78, w: 0.32, h: 0.20 },
   ],
-  playerScale: 0.55,
+  playerScale: 0.40,
   exits: {
     // Sortir par le sud → entrée de la Forêt de Lamber
     south: {
@@ -75,6 +106,215 @@ export const RAMEES_MAP: ExplorationMapConfig = {
     },
   },
 };
+
+// === Intérieurs de Ramees ===
+// Salles générées par scripts/gen-ramees-assets.py (1200x760).
+// Sortie : bord SUD → retour devant la porte du bâtiment.
+
+interface InteriorSpec {
+  key: string;               // 'auberge' → id 'ramees-auberge'
+  name: string;
+  doorX: number;             // position de la porte sur la map de Ramees
+  doorY: number;
+  lights: ExplorationMapConfig['lights'];
+  lightShafts?: ExplorationMapConfig['lightShafts'];
+  walkable: WalkableRect[];
+  interactables: Interactable[];
+}
+
+const INTERIORS: InteriorSpec[] = [
+  {
+    key: 'auberge',
+    name: 'Ramees — Auberge « Le Tampon Doré »',
+    doorX: 0.790, doorY: 0.510,
+    lights: [
+      { x: 0.83, y: 0.18, r: 60, color: 0xff9944 },   // cheminée
+      { x: 0.14, y: 0.12, r: 40, color: 0xffcc77 },   // fenêtres
+      { x: 0.40, y: 0.12, r: 40, color: 0xffcc77 },
+      { x: 0.23, y: 0.47, r: 28, color: 0xffe6a0 },   // bougies
+      { x: 0.50, y: 0.45, r: 28, color: 0xffe6a0 },
+    ],
+    walkable: [
+      { x: 0.04, y: 0.33, w: 0.62, h: 0.60 },
+      { x: 0.66, y: 0.60, w: 0.30, h: 0.33 },
+      { x: 0.66, y: 0.30, w: 0.30, h: 0.10 },
+    ],
+    interactables: [
+      {
+        type: 'npc', id: 'npc-juiffy', x: 0.87, y: 0.38,
+        spriteKey: 'npc-juiffy', name: 'Juiffy', label: '💬 Parler à Juiffy',
+        dialogueId: 'npc-juiffy',
+        gives: [{ itemId: 'cafeDuGreffier', count: 1 }],
+      },
+      {
+        type: 'npc', id: 'npc-cubique', x: 0.47, y: 0.66,
+        spriteKey: 'npc-cubique', name: 'Cubique', label: '💬 Parler à Cubique',
+        dialogueId: 'npc-cubique', flip: true,
+      },
+    ],
+  },
+  {
+    key: 'eglise',
+    name: 'Ramees — Église de la Sainte Réglementation',
+    doorX: 0.472, doorY: 0.325,
+    lights: [
+      { x: 0.50, y: 0.12, r: 75, color: 0xccaaff },   // vitrail
+      { x: 0.17, y: 0.12, r: 30, color: 0xaabbff },
+      { x: 0.83, y: 0.12, r: 30, color: 0xaabbff },
+      { x: 0.50, y: 0.30, r: 34, color: 0xffe6a0 },   // cierges
+    ],
+    lightShafts: [{ x: 0.50, width: 0.14 }],
+    walkable: [
+      { x: 0.06, y: 0.42, w: 0.88, h: 0.50 },
+      { x: 0.42, y: 0.30, w: 0.16, h: 0.20 },
+    ],
+    interactables: [
+      {
+        type: 'npc', id: 'npc-pretre', x: 0.41, y: 0.40,
+        spriteKey: 'npc-pretre', name: 'Père Célestin', label: '💬 Parler au Père Célestin',
+        dialogueId: 'npc-pretre',
+      },
+    ],
+  },
+  {
+    key: 'mairie',
+    name: 'Ramees — Mairie',
+    doorX: 0.656, doorY: 0.410,
+    lights: [
+      { x: 0.20, y: 0.12, r: 40, color: 0xffcc77 },
+      { x: 0.80, y: 0.12, r: 40, color: 0xffcc77 },
+      { x: 0.50, y: 0.10, r: 34, color: 0xcc99ff },   // bannière
+    ],
+    walkable: [
+      { x: 0.05, y: 0.55, w: 0.90, h: 0.38 },
+      { x: 0.05, y: 0.30, w: 0.20, h: 0.30 },
+      { x: 0.75, y: 0.30, w: 0.20, h: 0.30 },
+    ],
+    interactables: [
+      {
+        type: 'npc', id: 'npc-greffiere', x: 0.50, y: 0.38,
+        spriteKey: 'npc-greffiere', name: 'Greffière Ordonna', label: '💬 Parler à la greffière',
+        dialogueId: 'npc-greffiere',
+      },
+    ],
+  },
+  {
+    key: 'forge',
+    name: 'Ramees — Forge de Bragnar',
+    doorX: 0.215, doorY: 0.405,
+    lights: [
+      { x: 0.74, y: 0.18, r: 65, color: 0xff8833 },   // fourneau
+      { x: 0.53, y: 0.48, r: 30, color: 0xff9944 },
+    ],
+    walkable: [
+      { x: 0.05, y: 0.36, w: 0.90, h: 0.56 },
+    ],
+    interactables: [
+      {
+        type: 'npc', id: 'npc-forgeron', x: 0.62, y: 0.50,
+        spriteKey: 'npc-forgeron', name: 'Bragnar', label: '💬 Parler à Bragnar',
+        dialogueId: 'npc-forgeron', flip: true,
+      },
+    ],
+  },
+  {
+    key: 'herboristerie',
+    name: 'Ramees — Herboristerie de Steven',
+    doorX: 0.887, doorY: 0.590,
+    lights: [
+      { x: 0.77, y: 0.12, r: 40, color: 0xccffaa },
+      { x: 0.50, y: 0.48, r: 30, color: 0xaaffcc },
+    ],
+    walkable: [
+      { x: 0.05, y: 0.36, w: 0.90, h: 0.56 },
+    ],
+    interactables: [
+      {
+        type: 'npc', id: 'npc-steven', x: 0.42, y: 0.58,
+        spriteKey: 'npc-steven', name: 'Steven', label: '💬 Parler à Steven',
+        dialogueId: 'npc-steven',
+        gives: [{ itemId: 'dossierDeSoin', count: 2 }],
+      },
+    ],
+  },
+  {
+    key: 'echoppe',
+    name: 'Ramees — Échoppe de Clemodin',
+    doorX: 0.215, doorY: 0.590,
+    lights: [
+      { x: 0.13, y: 0.12, r: 38, color: 0xffcc77 },
+      { x: 0.42, y: 0.42, r: 30, color: 0xffe6a0 },
+    ],
+    walkable: [
+      { x: 0.05, y: 0.52, w: 0.90, h: 0.40 },
+      { x: 0.05, y: 0.32, w: 0.14, h: 0.30 },
+    ],
+    interactables: [
+      {
+        type: 'npc', id: 'npc-clemodin', x: 0.40, y: 0.40,
+        spriteKey: 'npc-clemodin', name: 'Clemodin', label: '💬 Parler à Clemodin',
+        dialogueId: 'npc-clemodin',
+        gives: [{ itemId: 'formulaireA38', count: 1 }],
+      },
+    ],
+  },
+  {
+    key: 'quenticast',
+    name: 'Ramees — Chez Quenticast',
+    doorX: 0.797, doorY: 0.715,
+    lights: [
+      { x: 0.55, y: 0.32, r: 45, color: 0x66bbff },   // écrans arcaniques
+      { x: 0.78, y: 0.38, r: 26, color: 0x66ffaa },
+    ],
+    walkable: [
+      { x: 0.05, y: 0.52, w: 0.90, h: 0.40 },
+      { x: 0.30, y: 0.34, w: 0.30, h: 0.30 },
+    ],
+    interactables: [
+      {
+        type: 'npc', id: 'npc-quenticast', x: 0.55, y: 0.58,
+        spriteKey: 'npc-quenticast', name: 'Quenticast', label: '💬 Parler à Quenticast',
+        dialogueId: 'npc-quenticast', flip: true,
+      },
+    ],
+  },
+];
+
+function buildInteriors(): Record<string, ExplorationMapConfig> {
+  const out: Record<string, ExplorationMapConfig> = {};
+  for (const spec of INTERIORS) {
+    const id = `ramees-${spec.key}`;
+    out[id] = {
+      id,
+      name: spec.name,
+      imageKey: `ex-map-${id}`,
+      imagePath: `assets/exploration/ramees/interiors/${spec.key}.jpg`,
+      spawn: { x: 0.50, y: 0.86 },
+      mood: 'city',
+      ambianceColor: 0x100a14,
+      depthScale: { top: 0.85, bottom: 1.05 },
+      lights: spec.lights,
+      lightShafts: spec.lightShafts,
+      interactables: spec.interactables,
+      // Couloir de porte ajouté d'office : la sortie sud doit toucher le bord.
+      walkable: [...spec.walkable, { x: 0.42, y: 0.80, w: 0.16, h: 0.20 }],
+      playerScale: 0.85,
+      exits: {
+        // Bord sud → on ressort devant la porte du bâtiment.
+        south: {
+          toMapId: 'ramees',
+          entryX: spec.doorX,
+          entryY: spec.doorY + 0.025,
+          indicatorX: 0.50,
+          indicatorY: 0.965,
+        },
+      },
+    };
+  }
+  return out;
+}
+
+export const RAMEES_INTERIORS = buildInteriors();
 
 // === Forêt de Lamber — grille d'écrans coordonnés ===
 interface LamberScreen {
@@ -546,6 +786,7 @@ export const START_MAP_ID: MapId = 'archives-entree';
 export const MAPS: Record<string, ExplorationMapConfig> = {
   bureau: BUREAU_MAP,
   ramees: RAMEES_MAP,
+  ...RAMEES_INTERIORS,
   ...ARCHIVES_MAPS,
   ...LAMBER_MAPS,
 };
@@ -566,6 +807,6 @@ export function getZoneName(id: string): string {
   if (id.startsWith('lamber-')) return 'Forêt de Lamber';
   if (id.startsWith('archives-')) return 'Les Archives Infinies';
   if (id === 'bureau') return 'Bureau des Archives Infinies';
-  if (id === 'ramees') return 'Ramees';
+  if (id === 'ramees' || id.startsWith('ramees-')) return 'Ramees';
   return getMap(id).name;
 }

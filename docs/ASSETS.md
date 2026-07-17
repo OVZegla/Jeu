@@ -26,7 +26,17 @@ Tous dérivés des assets originaux ci-dessus — même licence, même style.
 | `sprites/enemies/decret.png`, `decret2.png` | documents flottants de `sprites/boss.png` | ennemi « Décret errant » / « Arrêté vengeur » |
 | `exploration/archives/{entree,ouest,est,hall,boss}.jpg` | crops gradés de `bureau/map.jpg` | les 5 salles de la zone Archives |
 
-Régénération : `pip install pillow && python3 scripts/gen-derived-assets.py`.
+| `sprites/npcs/*.png` (8 PNJ) | recolorations HSV de `exploration/datpaloof/front.png` | Quenticast, Juiffy, Clemodin, Cubique, Steven, Père Célestin, Greffière Ordonna, Bragnar (`scripts/gen-ramees-assets.py`) |
+| `exploration/ramees/interiors/*.jpg` (7 salles) | pixel art dessiné par code dans la palette du jeu | intérieurs de Ramees : auberge, église, mairie, forge, herboristerie, échoppe, maison de Quenticast |
+
+Régénération : `pip install pillow && python3 scripts/gen-derived-assets.py && python3 scripts/gen-ramees-assets.py`.
+
+### Nettoyage de détourage
+
+`scripts/fix-sprite-fringe.py` : supprime les restes de fond blanc des sprites
+(poches opaques entre bras/corps, halos gris clair). Déjà appliqué aux sprites
+committés — à relancer si de nouveaux sprites bruts sont ajoutés, puis
+régénérer les dérivés.
 
 ## Assets manquants (solutions temporaires en place)
 
