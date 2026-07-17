@@ -219,6 +219,10 @@ export class ExplorationSceneV2 extends Phaser.Scene {
     this.stepEmitter.setDepth(1);
 
     this.loadMap(this.mapId);
+    // Accès debug depuis la console (mode ?debug uniquement)
+    if (this.debugMode && typeof window !== 'undefined') {
+      (window as any).__exScene = this;
+    }
     this.events_.onReady?.(this);
   }
 
@@ -1157,10 +1161,14 @@ export class ExplorationSceneV2 extends Phaser.Scene {
     const halfH = this.player.displayHeight / 2;
     const marginX = halfW + 10;
     const marginY = halfH + 10;
+    // Nord : le clamp vertical empêche logicalY de descendre sous
+    // offsetY + displayHeight (la tête reste visible) → le seuil nord doit
+    // être calé sur cette limite, pas sur halfH.
+    const northLimit = this.worldOffsetY + this.player.displayHeight + 12;
     let side: ExitSide | null = null;
     if (e.west && this.logicalX <= this.worldOffsetX + marginX) side = 'west';
     else if (e.east && this.logicalX >= this.worldOffsetX + this.worldW - marginX) side = 'east';
-    else if (e.north && this.logicalY <= this.worldOffsetY + marginY) side = 'north';
+    else if (e.north && this.logicalY <= northLimit) side = 'north';
     else if (e.south && this.logicalY >= this.worldOffsetY + this.worldH - marginY) side = 'south';
     if (!side) return;
     const exit = e[side]!;

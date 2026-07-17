@@ -301,8 +301,12 @@ const ARCHIVES_ENTREE: ExplorationMapConfig = {
     },
   ],
   walkable: [
-    { x: 0.10, y: 0.30, w: 0.80, h: 0.58 },
-    { x: 0.38, y: 0.82, w: 0.28, h: 0.16 },
+    // Grand sol (jusqu'au bord nord pour atteindre la sortie)
+    { x: 0.08, y: 0.04, w: 0.84, h: 0.58 },
+    // Couloir entre les deux lanternes centrales, vers l'escalier
+    { x: 0.46, y: 0.60, w: 0.12, h: 0.26 },
+    // Escalier sud
+    { x: 0.42, y: 0.82, w: 0.20, h: 0.16 },
   ],
   playerScale: 0.95,
   exits: {
@@ -362,6 +366,9 @@ const ARCHIVES_HALL: ExplorationMapConfig = {
     { x: 0.12, y: 0.26, w: 0.76, h: 0.60 },
     { x: 0.40, y: 0.12, w: 0.20, h: 0.20 },
     { x: 0.40, y: 0.84, w: 0.20, h: 0.14 },
+    // Couloirs vers les sorties ouest / est (jusqu'aux bords)
+    { x: 0.005, y: 0.42, w: 0.15, h: 0.20 },
+    { x: 0.845, y: 0.42, w: 0.15, h: 0.20 },
   ],
   playerScale: 0.90,
   exits: {
@@ -425,6 +432,8 @@ const ARCHIVES_OUEST: ExplorationMapConfig = {
   walkable: [
     { x: 0.14, y: 0.34, w: 0.78, h: 0.48 },
     { x: 0.60, y: 0.78, w: 0.34, h: 0.16 },
+    // Couloir vers la sortie est (jusqu'au bord)
+    { x: 0.86, y: 0.44, w: 0.135, h: 0.22 },
   ],
   playerScale: 0.90,
   exits: {
@@ -477,6 +486,8 @@ const ARCHIVES_EST: ExplorationMapConfig = {
   walkable: [
     { x: 0.08, y: 0.34, w: 0.80, h: 0.48 },
     { x: 0.10, y: 0.70, w: 0.44, h: 0.20 },
+    // Couloir vers la sortie ouest (jusqu'au bord)
+    { x: 0.005, y: 0.44, w: 0.135, h: 0.22 },
   ],
   playerScale: 0.90,
   exits: {
