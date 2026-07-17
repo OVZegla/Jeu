@@ -28,3 +28,68 @@ button:focus-visible {
 ::selection {
   background: rgba(216, 201, 138, 0.3);
 }
+
+/* === V2 : notifications globales (level-up…) === */
+.app-notice {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: linear-gradient(180deg, rgba(60, 44, 12, 0.95), rgba(40, 28, 8, 0.95));
+  border: 2px solid #ffe080;
+  color: #fff2cc;
+  font-family: Georgia, serif;
+  font-size: 16px;
+  padding: 12px 28px;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px #000c, 0 0 24px #ffe08044;
+  animation: app-notice-in 0.3s ease-out;
+  pointer-events: none;
+  max-width: 86vw;
+  text-align: center;
+}
+@keyframes app-notice-in {
+  from { transform: translate(-50%, -16px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* === V2 : écran de fin === */
+.ending-screen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at center, rgba(60, 30, 90, 0.35), transparent 70%),
+    #0a0612;
+}
+.ending-panel {
+  max-width: 640px;
+  padding: 40px 50px;
+  background: linear-gradient(180deg, #1c1030, #120a20);
+  border: 2px solid #6a4a9a;
+  border-radius: 20px;
+  text-align: center;
+  font-family: Georgia, serif;
+  color: #efe6ff;
+  box-shadow: 0 12px 50px #000d;
+  animation: app-notice-in 0.6s ease-out;
+}
+.ending-panel h1 { color: #ffe080; margin-top: 0; }
+.ending-panel p { line-height: 1.6; color: #d8cce8; }
+.ending-sub { font-style: italic; font-size: 13px; color: #9a8ac0; }
+.ending-actions { display: flex; gap: 14px; justify-content: center; margin-top: 24px; }
+.ending-actions button {
+  background: linear-gradient(180deg, #6a4a9a, #4a2a7a);
+  color: #fff;
+  border: 1px solid #9a7aca;
+  border-radius: 10px;
+  padding: 12px 26px;
+  font-family: Georgia, serif;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.ending-actions button:hover { transform: scale(1.05); box-shadow: 0 0 18px #9a7aca66; }

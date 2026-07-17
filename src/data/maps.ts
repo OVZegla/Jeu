@@ -52,7 +52,7 @@ export const RAMEES_MAP: ExplorationMapConfig = {
       y: 0.50,
       label: '🪨 Pierre de téléport',
       destinations: [
-        { toMapId: 'bureau', label: '📚 Bureau des Archives' },
+        { toMapId: 'archives-entree', label: '📚 Les Archives Infinies' },
       ],
     },
   ],
@@ -251,9 +251,291 @@ function generateLamberMaps(): Record<string, ExplorationMapConfig> {
 
 const LAMBER_MAPS = generateLamberMaps();
 
+// ============================================================
+// LES ARCHIVES INFINIES — zone prioritaire de la refonte (vertical slice).
+// 5 salles découpées dans bureau/map.jpg (voir scripts/gen-derived-assets.py).
+// Progression : entrée → hall (save) → ailes est/ouest (2 fragments du sceau)
+// → porte scellée → salle du boss.
+// ============================================================
+
+const ARCHIVES_ENTREE: ExplorationMapConfig = {
+  id: 'archives-entree',
+  name: 'Archives — Grande Entrée',
+  imageKey: 'ex-map-archives-entree',
+  imagePath: 'assets/exploration/archives/entree.jpg',
+  spawn: { x: 0.50, y: 0.82 },
+  mood: 'archives',
+  ambianceColor: 0x140a20,
+  depthScale: { top: 0.78, bottom: 1.06 },
+  lightShafts: [{ x: 0.30, width: 0.10 }, { x: 0.62, width: 0.14 }],
+  lights: [
+    { x: 0.325, y: 0.66, r: 60, color: 0xaa66ff },
+    { x: 0.445, y: 0.70, r: 55, color: 0x66ffcc },
+    { x: 0.635, y: 0.70, r: 55, color: 0x66ffcc },
+    { x: 0.775, y: 0.66, r: 60, color: 0xaa66ff },
+  ],
+  interactables: [
+    {
+      type: 'document',
+      id: 'arch-doc-registre',
+      x: 0.145, y: 0.575,
+      label: '📖 Examiner le registre',
+      dialogueId: 'lore-registre',
+    },
+    {
+      type: 'battle',
+      id: 'arch-entree-decret',
+      x: 0.68, y: 0.42,
+      spriteKey: 'enemy-decret',
+      label: '⚔️ Décret errant',
+      groupId: 'archives-decret-solo',
+      patrol: { dx: 0.10, dy: 0.03, ms: 2600 },
+      aggroRadius: 70,
+    },
+    {
+      type: 'teleportMenu',
+      id: 'arch-tp-entree',
+      x: 0.875, y: 0.62,
+      label: '🪨 Pierre de téléport',
+      destinations: [{ toMapId: 'ramees', label: '🏘 Ramees' }],
+    },
+  ],
+  walkable: [
+    { x: 0.10, y: 0.30, w: 0.80, h: 0.58 },
+    { x: 0.38, y: 0.82, w: 0.28, h: 0.16 },
+  ],
+  playerScale: 0.95,
+  exits: {
+    north: { toMapId: 'archives-hall', indicatorX: 0.50, indicatorY: 0.06 },
+  },
+};
+
+const ARCHIVES_HALL: ExplorationMapConfig = {
+  id: 'archives-hall',
+  name: 'Archives — Hall du Classement',
+  imageKey: 'ex-map-archives-hall',
+  imagePath: 'assets/exploration/archives/hall.jpg',
+  spawn: { x: 0.50, y: 0.80 },
+  mood: 'archives',
+  ambianceColor: 0x150b22,
+  depthScale: { top: 0.75, bottom: 1.05 },
+  lightShafts: [{ x: 0.48, width: 0.18 }],
+  lights: [
+    { x: 0.245, y: 0.42, r: 55, color: 0xaa66ff },
+    { x: 0.75, y: 0.42, r: 55, color: 0xaa66ff },
+    { x: 0.44, y: 0.20, r: 65, color: 0xcc88ff },
+  ],
+  interactables: [
+    {
+      type: 'savepoint',
+      id: 'arch-save-hall',
+      x: 0.50, y: 0.60,
+      label: '🪨 Pierre de mémoire — se reposer',
+    },
+    {
+      type: 'battle',
+      id: 'arch-hall-grimoire',
+      x: 0.26, y: 0.38,
+      spriteKey: 'enemy-grimoire',
+      label: '⚔️ Grimoire éveillé',
+      groupId: 'archives-hall-grimoire',
+      patrol: { dx: 0.06, dy: 0.05, ms: 3200 },
+      aggroRadius: 80,
+    },
+    {
+      type: 'document',
+      id: 'arch-doc-circulaire',
+      x: 0.79, y: 0.34,
+      label: '📜 Lire la circulaire',
+      dialogueId: 'lore-circulaire',
+    },
+    {
+      type: 'door',
+      id: 'arch-door-boss',
+      x: 0.50, y: 0.155,
+      label: '🚪 Porte de la Salle du Jugement',
+      toMapId: 'archives-boss',
+      lockedBySeal: true,
+    },
+  ],
+  walkable: [
+    { x: 0.12, y: 0.26, w: 0.76, h: 0.60 },
+    { x: 0.40, y: 0.12, w: 0.20, h: 0.20 },
+    { x: 0.40, y: 0.84, w: 0.20, h: 0.14 },
+  ],
+  playerScale: 0.90,
+  exits: {
+    south: { toMapId: 'archives-entree', indicatorX: 0.50, indicatorY: 0.95 },
+    west: { toMapId: 'archives-ouest', indicatorX: 0.045, indicatorY: 0.55 },
+    east: { toMapId: 'archives-est', indicatorX: 0.955, indicatorY: 0.55 },
+  },
+};
+
+const ARCHIVES_OUEST: ExplorationMapConfig = {
+  id: 'archives-ouest',
+  name: 'Archives — Aile Ouest, rayonnages interdits',
+  imageKey: 'ex-map-archives-ouest',
+  imagePath: 'assets/exploration/archives/ouest.jpg',
+  spawn: { x: 0.85, y: 0.60 },
+  mood: 'archives',
+  ambianceColor: 0x0d0618,
+  depthScale: { top: 0.78, bottom: 1.04 },
+  lights: [
+    { x: 0.28, y: 0.52, r: 50, color: 0xaa66ff },
+    { x: 0.62, y: 0.34, r: 45, color: 0xaa66ff },
+    { x: 0.16, y: 0.72, r: 40, color: 0x66ffcc },
+  ],
+  interactables: [
+    {
+      type: 'battle',
+      id: 'arch-ouest-patrouille',
+      x: 0.42, y: 0.46,
+      spriteKey: 'enemy-grimoire',
+      label: '⚔️ Patrouille des rayonnages',
+      groupId: 'archives-ouest-patrouille',
+      patrol: { dx: 0.12, dy: 0.04, ms: 3000 },
+      aggroRadius: 85,
+    },
+    {
+      type: 'chest',
+      id: 'arch-chest-fragment-ouest',
+      x: 0.185, y: 0.42,
+      label: '🗝 Tiroir verrouillé',
+      items: [],
+      sealFragment: true,
+      dialogueId: 'lore-fragment-ouest',
+    },
+    {
+      type: 'document',
+      id: 'arch-doc-plainte',
+      x: 0.66, y: 0.66,
+      label: '📄 Une plainte poussiéreuse',
+      dialogueId: 'lore-plainte',
+    },
+    {
+      type: 'chest',
+      id: 'arch-secret-cafe',
+      x: 0.88, y: 0.86,
+      label: '❔ Quelque chose brille…',
+      items: [{ itemId: 'cafeDuGreffier', count: 2 }],
+      dialogueId: 'secret-cafe',
+      hidden: true,
+    },
+  ],
+  walkable: [
+    { x: 0.14, y: 0.34, w: 0.78, h: 0.48 },
+    { x: 0.60, y: 0.78, w: 0.34, h: 0.16 },
+  ],
+  playerScale: 0.90,
+  exits: {
+    east: { toMapId: 'archives-hall', indicatorX: 0.955, indicatorY: 0.55 },
+  },
+};
+
+const ARCHIVES_EST: ExplorationMapConfig = {
+  id: 'archives-est',
+  name: 'Archives — Aile Est, salle des budgets',
+  imageKey: 'ex-map-archives-est',
+  imagePath: 'assets/exploration/archives/est.jpg',
+  spawn: { x: 0.12, y: 0.60 },
+  mood: 'archives',
+  ambianceColor: 0x120a1e,
+  depthScale: { top: 0.78, bottom: 1.04 },
+  lights: [
+    { x: 0.66, y: 0.48, r: 55, color: 0xffaa44 },
+    { x: 0.36, y: 0.36, r: 45, color: 0xaa66ff },
+    { x: 0.82, y: 0.70, r: 40, color: 0xaa66ff },
+  ],
+  interactables: [
+    {
+      type: 'battle',
+      id: 'arch-est-elite',
+      x: 0.58, y: 0.46,
+      spriteKey: 'enemy-grimoire2',
+      label: '⚔️ Budget dévorant (élite)',
+      groupId: 'archives-est-elite',
+      patrol: { dx: 0.05, dy: 0.05, ms: 3800 },
+      aggroRadius: 90,
+    },
+    {
+      type: 'chest',
+      id: 'arch-chest-fragment-est',
+      x: 0.80, y: 0.38,
+      label: '🗝 Coffret scellé',
+      items: [],
+      sealFragment: true,
+      dialogueId: 'lore-fragment-est',
+    },
+    {
+      type: 'chest',
+      id: 'arch-chest-soins-est',
+      x: 0.24, y: 0.74,
+      label: '📦 Carton d\'archives',
+      items: [{ itemId: 'dossierDeSoin', count: 2 }],
+    },
+  ],
+  walkable: [
+    { x: 0.08, y: 0.34, w: 0.80, h: 0.48 },
+    { x: 0.10, y: 0.70, w: 0.44, h: 0.20 },
+  ],
+  playerScale: 0.90,
+  exits: {
+    west: { toMapId: 'archives-hall', indicatorX: 0.045, indicatorY: 0.55 },
+  },
+};
+
+const ARCHIVES_BOSS: ExplorationMapConfig = {
+  id: 'archives-boss',
+  name: 'Archives — Salle du Jugement',
+  imageKey: 'ex-map-archives-boss',
+  imagePath: 'assets/exploration/archives/boss.jpg',
+  spawn: { x: 0.50, y: 0.86 },
+  mood: 'archives',
+  ambianceColor: 0x1a0b28,
+  depthScale: { top: 0.72, bottom: 1.02 },
+  lightShafts: [{ x: 0.50, width: 0.16 }],
+  lights: [
+    { x: 0.355, y: 0.38, r: 60, color: 0xcc55ff },
+    { x: 0.645, y: 0.38, r: 60, color: 0xcc55ff },
+    { x: 0.50, y: 0.30, r: 80, color: 0xaa44ff },
+  ],
+  interactables: [
+    {
+      type: 'boss',
+      id: 'champion',
+      x: 0.50, y: 0.44,
+      spriteKey: 'ex-boss-bureau',
+      label: '⚔️ Affronter le Champion',
+      engages: true,
+      groupId: 'archives-boss',
+      introDialogueId: 'boss-intro',
+      outroDialogueId: 'boss-outro',
+    },
+  ],
+  walkable: [
+    { x: 0.16, y: 0.52, w: 0.68, h: 0.42 },
+    { x: 0.36, y: 0.36, w: 0.28, h: 0.24 },
+  ],
+  playerScale: 0.90,
+  exits: {
+    south: { toMapId: 'archives-hall', indicatorX: 0.50, indicatorY: 0.95 },
+  },
+};
+
+export const ARCHIVES_MAPS: Record<string, ExplorationMapConfig> = {
+  'archives-entree': ARCHIVES_ENTREE,
+  'archives-hall': ARCHIVES_HALL,
+  'archives-ouest': ARCHIVES_OUEST,
+  'archives-est': ARCHIVES_EST,
+  'archives-boss': ARCHIVES_BOSS,
+};
+
+export const START_MAP_ID: MapId = 'archives-entree';
+
 export const MAPS: Record<string, ExplorationMapConfig> = {
   bureau: BUREAU_MAP,
   ramees: RAMEES_MAP,
+  ...ARCHIVES_MAPS,
   ...LAMBER_MAPS,
 };
 
@@ -271,6 +553,7 @@ export function getAllMapImagesToPreload(): Array<{ key: string; path: string }>
 // Toutes les maps lamber-*-* sont dans la zone "Forêt de Lamber".
 export function getZoneName(id: string): string {
   if (id.startsWith('lamber-')) return 'Forêt de Lamber';
+  if (id.startsWith('archives-')) return 'Les Archives Infinies';
   if (id === 'bureau') return 'Bureau des Archives Infinies';
   if (id === 'ramees') return 'Ramees';
   return getMap(id).name;

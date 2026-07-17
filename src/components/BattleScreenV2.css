@@ -1,0 +1,438 @@
+/* Écran de combat V2 — HUD pixel-art moderne */
+
+.bv2 {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #0a0612;
+  display: flex;
+  flex-direction: column;
+}
+
+.bv2-canvas {
+  position: absolute;
+  inset: 0;
+}
+.bv2-canvas canvas {
+  image-rendering: pixelated;
+}
+
+/* === Ordre des tours === */
+.bv2-turn-order {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 6, 20, 0.75);
+  border: 1px solid #3a2a55;
+  border-radius: 10px;
+  padding: 6px 10px;
+  backdrop-filter: blur(3px);
+}
+.bv2-to-label {
+  font-size: 11px;
+  color: #8a7aaa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-right: 2px;
+}
+.bv2-to-chip {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #555;
+  background: #171028;
+  font-size: 15px;
+  transition: transform 0.2s ease;
+}
+.bv2-to-chip.current {
+  transform: scale(1.25);
+  box-shadow: 0 0 10px #ffe08088;
+  border-color: #ffe080 !important;
+}
+.bv2-to-chip.enemy { filter: saturate(0.8); }
+.bv2-to-round {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #c9b8e8;
+}
+
+/* === Barre boss === */
+.bv2-boss-bar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: min(560px, 46vw);
+  background: rgba(15, 8, 26, 0.82);
+  border: 1px solid #55308a;
+  border-radius: 12px;
+  padding: 8px 14px;
+  text-align: center;
+  backdrop-filter: blur(3px);
+}
+.bv2-boss-bar.dead { opacity: 0.4; }
+.bv2-boss-name {
+  font-family: Georgia, serif;
+  font-size: 14px;
+  color: #e8d8ff;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bv2-boss-enrage {
+  color: #ff5577;
+  font-weight: bold;
+  animation: bv2-pulse 0.8s infinite alternate;
+}
+.bv2-boss-status {
+  margin-top: 4px;
+  font-size: 13px;
+  min-height: 18px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.bv2-shielded {
+  color: #ffcc66;
+  font-size: 11px;
+  font-weight: bold;
+  border: 1px solid #ffcc6666;
+  border-radius: 6px;
+  padding: 0 6px;
+  animation: bv2-pulse 1s infinite alternate;
+}
+
+/* === Barres PV/MP génériques === */
+.bv2-hp-track {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: #241533;
+  border: 1px solid #000;
+  overflow: hidden;
+}
+.bv2-hp-track.small { height: 8px; width: 120px; display: inline-block; }
+.bv2-hp-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #7fe085, #2e9e4f);
+  transition: width 0.35s ease;
+}
+.bv2-hp-fill.enemy { background: linear-gradient(180deg, #e0917f, #9e442e); }
+.bv2-hp-fill.boss { background: linear-gradient(180deg, #c479ff, #7b2ea0); }
+.bv2-hp-fill.boss.enraged { background: linear-gradient(180deg, #ff6688, #aa1133); }
+.bv2-hp-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+.bv2-mp-track {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  background: #16203a;
+  border: 1px solid #000;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.bv2-mp-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #7fb2e0, #2e5a9e);
+  transition: width 0.35s ease;
+}
+
+/* === Plaques ennemis === */
+.bv2-enemy-plates {
+  position: absolute;
+  top: 84px;
+  right: 12px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+.bv2-enemy-plate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 8, 26, 0.78);
+  border: 1px solid #3a2a55;
+  border-radius: 9px;
+  padding: 5px 10px;
+  color: #d8cce8;
+  font-size: 12px;
+  cursor: default;
+  font-family: Georgia, serif;
+}
+.bv2-enemy-plate.dead { opacity: 0.35; text-decoration: line-through; }
+.bv2-enemy-plate.targetable {
+  cursor: pointer;
+  border-color: #ffe080;
+  box-shadow: 0 0 12px #ffe08066;
+  animation: bv2-pulse 0.7s infinite alternate;
+}
+.bv2-ep-status { min-width: 20px; }
+
+/* === Bannières === */
+.bv2-banner {
+  position: absolute;
+  top: 34%;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.bv2-banner span {
+  font-family: Georgia, serif;
+  font-size: clamp(20px, 3.2vw, 34px);
+  color: #ffe6c8;
+  background: linear-gradient(90deg, transparent, rgba(20, 8, 36, 0.9) 18%, rgba(20, 8, 36, 0.9) 82%, transparent);
+  padding: 14px 60px;
+  text-shadow: 0 2px 8px #000;
+  animation: bv2-banner-in 0.5s ease-out;
+  text-align: center;
+}
+.bv2-warning {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 41;
+  background: rgba(120, 10, 30, 0.85);
+  border: 1px solid #ff5577;
+  color: #ffd8e0;
+  font-family: Georgia, serif;
+  padding: 8px 22px;
+  border-radius: 10px;
+  font-size: 15px;
+  animation: bv2-pulse 0.5s infinite alternate;
+  pointer-events: none;
+  max-width: 70vw;
+  text-align: center;
+}
+.bv2-target-hint {
+  position: absolute;
+  bottom: 218px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 42;
+  background: rgba(20, 40, 16, 0.9);
+  border: 1px solid #7fe085;
+  color: #d8ffd8;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.bv2-target-hint button {
+  background: #232;
+  color: #cfc;
+  border: 1px solid #575;
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+/* === Bas d'écran === */
+.bv2-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(300px, 1.2fr) minmax(240px, 0.9fr) minmax(200px, 0.9fr);
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, transparent, rgba(8, 4, 16, 0.92) 30%);
+  min-height: 200px;
+  align-items: end;
+}
+
+.bv2-heroes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.bv2-hero-card {
+  background: rgba(18, 10, 30, 0.92);
+  border: 2px solid #444;
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  color: #e8e0f0;
+  font-family: Georgia, serif;
+  cursor: default;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.bv2-hero-card.active {
+  transform: translateY(-6px);
+  box-shadow: 0 0 16px #ffe08055;
+  outline: 2px solid #ffe080;
+}
+.bv2-hero-card.dead { opacity: 0.45; filter: grayscale(0.8); }
+.bv2-hero-card.targetable {
+  cursor: pointer;
+  outline: 2px solid #7fe085;
+  box-shadow: 0 0 14px #7fe08577;
+  animation: bv2-pulse 0.7s infinite alternate;
+}
+.bv2-hc-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+.bv2-hc-level { color: #b8a8d8; font-size: 11px; }
+.bv2-hc-status {
+  min-height: 16px;
+  margin-top: 4px;
+  font-size: 12px;
+  display: flex;
+  gap: 4px;
+}
+
+/* === Menu d'action === */
+.bv2-menu {
+  min-height: 170px;
+  display: flex;
+  align-items: end;
+}
+.bv2-root-menu, .bv2-sub-menu {
+  width: 100%;
+  background: rgba(18, 10, 30, 0.94);
+  border: 1px solid #55408a;
+  border-radius: 12px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  animation: bv2-menu-in 0.18s ease-out;
+}
+.bv2-menu-title {
+  font-size: 12px;
+  color: #b09fd8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 2px 6px 4px;
+}
+.bv2-menu-item {
+  position: relative;
+  text-align: left;
+  background: #201335;
+  color: #efe6ff;
+  border: 1px solid #453365;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.12s;
+}
+.bv2-menu-item:hover:not(:disabled) {
+  background: #322050;
+  transform: translateX(4px);
+}
+.bv2-menu-item:disabled { opacity: 0.45; cursor: not-allowed; }
+.bv2-menu-item small { float: right; color: #9f8fc8; font-size: 11px; }
+.bv2-menu-item.back { background: #171025; color: #b0a0d0; }
+.bv2-skill-desc {
+  display: block;
+  font-size: 11px;
+  color: #8f80b8;
+  margin-top: 2px;
+}
+.bv2-waiting {
+  width: 100%;
+  text-align: center;
+  color: #7a6a9a;
+  font-size: 20px;
+  padding-bottom: 40px;
+}
+.bv2-empty { color: #8f80b8; padding: 8px; font-size: 13px; }
+
+/* === Log === */
+.bv2-log {
+  max-height: 180px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+/* === Overlays fin de combat === */
+.bv2-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 2, 10, 0.55);
+  animation: bv2-fade-in 0.4s ease-out;
+}
+.bv2-overlay.dark { background: rgba(4, 2, 10, 0.82); }
+.bv2-panel {
+  background: linear-gradient(180deg, #1c1030, #120a20);
+  border: 2px solid #6a4a9a;
+  border-radius: 16px;
+  padding: 28px 44px;
+  text-align: center;
+  color: #efe6ff;
+  font-family: Georgia, serif;
+  box-shadow: 0 8px 40px #000c;
+}
+.bv2-panel h2 { margin: 0 0 12px; font-size: 30px; color: #ffe080; }
+.bv2-xp { color: #b8e8b0; font-size: 16px; }
+.bv2-drops { list-style: none; padding: 0; margin: 10px 0; color: #d8cce8; }
+.bv2-drops li { padding: 2px 0; }
+.bv2-btn {
+  margin-top: 14px;
+  background: linear-gradient(180deg, #6a4a9a, #4a2a7a);
+  color: #fff;
+  border: 1px solid #9a7aca;
+  border-radius: 10px;
+  padding: 10px 30px;
+  font-family: Georgia, serif;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.bv2-btn:hover { transform: scale(1.05); box-shadow: 0 0 18px #9a7aca66; }
+
+@keyframes bv2-pulse { from { opacity: 0.75; } to { opacity: 1; } }
+@keyframes bv2-banner-in {
+  from { transform: scale(1.25); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes bv2-menu-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes bv2-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Responsive : écrans étroits */
+@media (max-width: 900px) {
+  .bv2-bottom { grid-template-columns: 1fr 1fr; }
+  .bv2-log { display: none; }
+  .bv2-boss-bar { width: 70vw; }
+}

@@ -69,3 +69,74 @@ export const BALANCE = {
   critMultiplier: 1.75,
   enrageDamageMultiplier: 1.15, // le boss tape un peu plus fort en phase enragée
 };
+
+// ============================================================
+// Équilibrage V2 (refonte RPG) — vitesse, éléments, ennemis, XP, objets
+// ============================================================
+
+export const BALANCE2 = {
+  // Multiplicateurs élémentaires
+  weaknessMultiplier: 1.5,
+  resistanceMultiplier: 0.6,
+  defendReduction: 0.55,        // « Garde » générique : -55% dégâts subis 1 tour
+
+  // Vitesse (initiative) des héros
+  heroSpeeds: { datpaloof: 9, baghaar: 8, zlatax: 13 },
+
+  // Croissance par niveau (multiplicateur appliqué par level-up)
+  levelGrowth: { hp: 0.10, mp: 0.08, power: 0.06 },
+  xpForLevel: (level: number) => Math.round(90 * Math.pow(level, 1.5)),
+
+  // Ennemis normaux des Archives
+  enemies: {
+    grimoire: {
+      maxHp: 150, defense: 0.10, power: 0.9, speed: 7, xp: 55,
+      weaknesses: ['sacre', 'feu'], resistances: ['occulte'],
+    },
+    decret: {
+      maxHp: 105, defense: 0.05, power: 0.8, speed: 14, xp: 40,
+      weaknesses: ['foudre', 'feu'], resistances: ['physique'],
+    },
+    grimoire2: { // élite « Budget dévorant »
+      maxHp: 300, defense: 0.18, power: 1.15, speed: 6, xp: 140,
+      weaknesses: ['sacre'], resistances: ['occulte', 'physique'],
+    },
+    decret2: { // « Arrêté vengeur »
+      maxHp: 140, defense: 0.08, power: 1.0, speed: 12, xp: 70,
+      weaknesses: ['foudre'], resistances: ['physique'],
+    },
+  },
+
+  // Boss V2
+  boss2: {
+    maxHp: 1500, defense: 0.12, power: 1.0, speed: 10, xp: 600,
+    weaknesses: [] as string[], resistances: ['bureaucratie', 'occulte'],
+    phase2Threshold: 0.70,      // ≤70% → invocation des Pages protectrices
+    phase3Threshold: 0.40,      // ≤40% → enragé + Archivage définitif télégraphié
+    summonShieldValue: 0.65,    // réduction des dégâts subis tant que les pages vivent
+  },
+
+  // Compétences ennemies
+  enemySkills: {
+    coupDeTranche:    { power: 55, cooldown: 0, variance: 0.15 },
+    paragrapheSoporifique: { cooldown: 3, skipChance: 0.5 },
+    coupureAdministrative: { power: 40, cooldown: 2, dotValue: 14, dotDuration: 2 },
+    notificationRecommandee: { power: 60, cooldown: 0, variance: 0.1 },
+    ponctionBudgetaire: { power: 70, cooldown: 2, mpDrain: 25 },
+    jurisprudenceEcrasante: { power: 85, cooldown: 3 },
+  },
+
+  // Attaque télégraphiée du boss (phase 3)
+  archivageDefinitifTelegraphed: { power: 150 },
+
+  // Objets
+  items: {
+    dossierDeSoin: { heal: 90 },
+    cafeDuGreffier: { mp: 45 },
+    formulaireA38: {},           // purge les altérations négatives
+    encreBenite: { revivePct: 0.5 },
+  },
+
+  // Inventaire de départ
+  startingInventory: { dossierDeSoin: 3, cafeDuGreffier: 2, formulaireA38: 1, encreBenite: 1 },
+};

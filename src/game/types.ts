@@ -134,6 +134,61 @@ export type Interactable =
       spriteKey: string;
       label: string;
       engages: true;
+      // V2 : groupe d'ennemis + dialogues de mise en scène (optionnels)
+      groupId?: string;
+      introDialogueId?: string;
+      outroDialogueId?: string;
+    }
+  | {
+      // V2 : combat contre un groupe d'ennemis visibles qui patrouillent
+      type: 'battle';
+      id: string;
+      x: number;
+      y: number;
+      spriteKey: string;      // sprite de l'ennemi visible en exploration
+      label: string;
+      groupId: string;        // référence ENEMY_GROUPS
+      patrol?: { dx: number; dy: number; ms: number }; // aller-retour (0..1 relatif map)
+      aggroRadius?: number;   // déclenche le combat à l'approche (px monde)
+    }
+  | {
+      // V2 : point de sauvegarde / repos
+      type: 'savepoint';
+      id: string;
+      x: number;
+      y: number;
+      label: string;
+    }
+  | {
+      // V2 : document à examiner (narration environnementale)
+      type: 'document';
+      id: string;
+      x: number;
+      y: number;
+      label: string;
+      dialogueId: string;
+    }
+  | {
+      // V2 : coffre / objet à ramasser (une seule fois, persisté)
+      type: 'chest';
+      id: string;
+      x: number;
+      y: number;
+      label: string;
+      items: Array<{ itemId: string; count: number }>;
+      dialogueId?: string;
+      sealFragment?: boolean; // contient un fragment du Sceau de l'Archiviste
+      hidden?: boolean;       // secret : indicateur très discret
+    }
+  | {
+      // V2 : porte (éventuellement scellée) vers une autre map
+      type: 'door';
+      id: string;
+      x: number;
+      y: number;
+      label: string;
+      toMapId: MapId;
+      lockedBySeal?: boolean; // nécessite les 2 fragments du sceau
     }
   | {
       type: 'teleport';
@@ -191,6 +246,14 @@ export interface ExplorationMapConfig {
   // Sorties de la map vers d'autres maps. Le joueur qui touche le bord
   // correspondant transite automatiquement.
   exits?: Partial<Record<ExitSide, MapExit>>;
+  // === V2 : ambiance 2.5D ===
+  mood?: 'archives' | 'forest' | 'city';
+  // Halos lumineux additifs (positions 0..1) — complètent les lampes du décor
+  lights?: Array<{ x: number; y: number; r: number; color: number }>;
+  // Rais de lumière volumétriques (x = position 0..1 en haut de la map)
+  lightShafts?: Array<{ x: number; width: number; tilt?: number }>;
+  // Perspective simulée : scale du joueur interpolé entre haut et bas de map
+  depthScale?: { top: number; bottom: number };
 }
 
 export interface PendingTargetSelection {
